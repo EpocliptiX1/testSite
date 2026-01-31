@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discussion Forum - Legion Space</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/theme-enhancements.css">
+    <link rel="stylesheet" href="/css/forum.css">
+    <script src="/js/encryption.js"></script>
+    <script src="/js/theme.js"></script>
+    <script src="/js/i18n.js"></script>
+    <script src="/js/netflixFeatures.js"></script>
+    <script src="/js/keyboardShortcuts.js"></script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo-container">
+            <img src="/img/LOGO.png" alt="Logo" class="logo-img">
+            <img src="/img/LOGO_Short.png" alt="Logo" class="logo-img logo-imgS">
+        </div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="/html/indexMain.html" class="myNavLink">Home</a></li>
+            <li><a href="/html/allMovies.html" class="myNavLink">Movies</a></li>
+            <li><a href="/html/forum.html" class="myNavLink noborder">Forum</a></li>
+        </ul>
+    </nav>
+
+    <div class="forum-container">
+        <!-- Left Sidebar: Movies List -->
+        <aside class="forum-sidebar">
+            <div class="sidebar-header">
+                <h2>Movie Discussions</h2>
+                <button class="add-thread-btn" onclick="openAddMovieModal()">
+                    <span>+</span> Add Movie
+                </button>
+            </div>
+            <div class="movies-list" id="moviesList">
+                <!-- Movies will be loaded here -->
+            </div>
+        </aside>
+
+        <!-- Main Content: Threads -->
+        <main class="forum-main">
+            <div class="forum-header">
+                <div class="forum-info">
+                    <h1 id="currentMovieTitle">Select a movie to view discussions</h1>
+                    <p id="currentMovieDesc">Choose a movie from the sidebar to see all discussion threads</p>
+                </div>
+                <button class="create-thread-btn" id="createThreadBtn" onclick="openCreateThreadModal()" style="display: none;">
+                    New Thread
+                </button>
+            </div>
+            
+            <div class="threads-container" id="threadsContainer">
+                <!-- Threads will be loaded here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Add Movie Modal -->
+    <div id="addMovieModal" class="settings-modal-overlay">
+        <div class="settings-content forum-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Movie to Forum</h2>
+                <span class="close-settings" onclick="closeAddMovieModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="input-group">
+                    <input type="text" id="movieSearchInput" placeholder=" " oninput="searchMoviesForForum()">
+                    <label>Search for a movie...</label>
+                </div>
+                <div id="movieSearchResults" class="netflix-grid" style="margin-top: 20px;">
+                    <!-- Search results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Thread Modal -->
+    <div id="createThreadModal" class="settings-modal-overlay">
+        <div class="settings-content forum-modal">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Discussion Thread</h2>
+                <span class="close-settings" onclick="closeCreateThreadModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="createThreadForm" onsubmit="submitThread(event)">
+                    <div class="input-group">
+                        <input type="text" id="threadTitle" required placeholder=" ">
+                        <label>Thread Title</label>
+                    </div>
+                    <div class="input-group">
+                        <textarea id="threadDescription" rows="5" required placeholder=" "></textarea>
+                        <label>Description</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="url" id="threadImage" placeholder=" ">
+                        <label>Image URL (optional)</label>
+                    </div>
+                    <button type="submit" class="apply-btn" style="width: 100%;">Create Thread</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Thread Detail Modal -->
+    <div id="threadDetailModal" class="settings-modal-overlay">
+        <div class="settings-content forum-modal thread-detail">
+            <div class="modal-header">
+                <div>
+                    <h2 id="threadDetailTitle" class="modal-title">Thread Title</h2>
+                    <p id="threadDetailAuthor" style="color: #888; font-size: 0.9rem; margin: 5px 0 0 0;"></p>
+                </div>
+                <span class="close-settings" onclick="closeThreadDetailModal()">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="thread-detail-content">
+                    <img id="threadDetailImage" style="max-width: 100%; border-radius: 8px; margin-bottom: 15px; display: none;">
+                    <p id="threadDetailDescription"></p>
+                    <div class="thread-votes">
+                        <button class="vote-btn upvote" onclick="voteThread('up')">
+                            <span>▲</span>
+                        </button>
+                        <span id="threadScore" class="vote-score">0</span>
+                        <button class="vote-btn downvote" onclick="voteThread('down')">
+                            <span>▼</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="comments-section">
+                    <h3>Comments</h3>
+                    <div id="threadComments" class="comments-list"></div>
+                    <form id="addCommentForm" class="comment-form" onsubmit="submitComment(event)">
+                        <input id="commentInput" type="text" placeholder="Write a comment..." required>
+                        <button type="submit" class="apply-btn">Post</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/forum.js"></script>
+    <script src="/js/mainPageControls.js"></script>
+</body>
+</html>

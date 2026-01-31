@@ -49,6 +49,17 @@ if (!fs.existsSync(usersPath)) {
     fs.writeFileSync(usersPath, JSON.stringify([]));
 }
 
+// --- 3.5 FORUM FILES SETUP ---
+const forumMoviesPath = path.join(reviewsDir, 'forum_movies.json');
+const forumThreadsPath = path.join(reviewsDir, 'forum_threads.json');
+
+if (!fs.existsSync(forumMoviesPath)) {
+    fs.writeFileSync(forumMoviesPath, JSON.stringify([]));
+}
+if (!fs.existsSync(forumThreadsPath)) {
+    fs.writeFileSync(forumThreadsPath, JSON.stringify([]));
+}
+
 // =========================================
 //  4. MOVIE READ ROUTES
 // =========================================
@@ -799,6 +810,266 @@ app.delete('/playlists/:id/movies/:movieId', (req, res) => {
     } catch (err) {
         console.error('Error removing movie from playlist:', err);
         res.status(500).json({ error: 'Could not remove movie' });
+    }
+});
+
+// =========================================
+//  9.5 FORUM ROUTES
+// =========================================
+
+// Get all forum movies
+app.get('/forum/movies', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumMoviesPath, 'utf8');
+        const movies = JSON.parse(data) || [];
+        
+        // Count threads for each movie
+        const threadsData = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(threadsData) || [];
+        
+        const moviesWithCounts = movies.map(movie => ({
+            ...movie,
+            threadCount: threads.filter(t => String(t.movieId) === String(movie.movieId)).length
+        }));
+        
+        res.json(moviesWithCounts);
+    } catch (err) {
+        console.error('Error reading forum movies:', err);
+        res.status(500).json({ error: 'Could not read forum movies' });
+    }
+});
+
+// Add movie to forum
+app.post('/forum/movies', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumMoviesPath, 'utf8');
+        const movies = JSON.parse(data) || [];
+        const { movieId, movieTitle, poster, genre, userUID, username } = req.body;
+        
+        if (!movieId || !movieTitle) {
+            return res.status(400).json({ error: 'movieId and movieTitle required' });
+        }
+        
+        // Check if movie already exists
+        const exists = movies.find(m => String(m.movieId) === String(movieId));
+        if (exists) {
+            return res.status(200).json({ message: 'Movie already in forum', movie: exists });
+        }
+        
+        const newMovie = {
+            movieId: String(movieId),
+            movieTitle,
+            poster: poster || '',
+            genre: genre || '',
+            addedBy: username || 'User',
+            addedByUID: parseInt(userUID, 10) || 0,
+            createdAt: new Date().toISOString()
+        };
+        
+        movies.unshift(newMovie);
+        fs.writeFileSync(forumMoviesPath, JSON.stringify(movies, null, 2));
+        res.json(newMovie);
+    } catch (err) {
+        console.error('Error adding forum movie:', err);
+        res.status(500).json({ error: 'Could not add movie' });
+    }
+});
+
+// Get threads for a movie
+app.get('/forum/threads', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        let threads = JSON.parse(data) || [];
+        
+        const movieId = req.query.movieId;
+        if (movieId) {
+            threads = threads.filter(t => String(t.movieId) === String(movieId));
+        }
+        
+        // Count comments for each thread
+        threads = threads.map(thread => ({
+            ...thread,
+            commentCount: (thread.comments || []).length
+        }));
+        
+        // Sort by score (descending)
+        threads.sort((a, b) => (b.score || 0) - (a.score || 0));
+        
+        res.json(threads);
+    } catch (err) {
+        console.error('Error reading threads:', err);
+        res.status(500).json({ error: 'Could not read threads' });
+    }
+});
+
+// Create new thread
+app.post('/forum/threads', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const { movieId, title, description, image, userUID, username } = req.body;
+        
+        if (!movieId || !title || !description) {
+            return res.status(400).json({ error: 'movieId, title, and description required' });
+        }
+        
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) {
+            return res.status(403).json({ error: 'Sign in to create threads' });
+        }
+        
+        const newThread = {
+            id: String(Date.now()),
+            movieId: String(movieId),
+            title: String(title).trim(),
+            description: String(description).trim(),
+            image: image || '',
+            username: username || 'User',
+            userUID: uid,
+            score: 0,
+            voters: {},
+            comments: [],
+            createdAt: new Date().toISOString()
+        };
+        
+        threads.unshift(newThread);
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json(newThread);
+    } catch (err) {
+        console.error('Error creating thread:', err);
+        res.status(500).json({ error: 'Could not create thread' });
+    }
+});
+
+// Vote on thread
+app.post('/forum/threads/:id/vote', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const idx = threads.findIndex(t => String(t.id) === String(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Thread not found' });
+        
+        const { userUID, vote } = req.body || {};
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) {
+            return res.status(403).json({ error: 'Sign in to vote' });
+        }
+        if (vote !== 'up' && vote !== 'down') {
+            return res.status(400).json({ error: 'Invalid vote' });
+        }
+        
+        const thread = threads[idx];
+        if (!thread.voters) thread.voters = {};
+        if (thread.score === undefined || thread.score === null) thread.score = 0;
+        
+        const prevVote = thread.voters[String(uid)] || null;
+        if (prevVote === vote) {
+            return res.status(409).json({ error: 'Already voted' });
+        }
+        
+        // Adjust score based on vote change
+        if (prevVote === 'up') thread.score -= 1;
+        if (prevVote === 'down') thread.score += 1;
+        
+        thread.voters[String(uid)] = vote;
+        if (vote === 'up') thread.score += 1;
+        if (vote === 'down') thread.score -= 1;
+        
+        threads[idx] = thread;
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json({ score: thread.score });
+    } catch (err) {
+        console.error('Error voting on thread:', err);
+        res.status(500).json({ error: 'Could not vote' });
+    }
+});
+
+// Get comments for a thread
+app.get('/forum/threads/:id/comments', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const thread = threads.find(t => String(t.id) === String(req.params.id));
+        if (!thread) return res.status(404).json({ error: 'Thread not found' });
+        
+        res.json(thread.comments || []);
+    } catch (err) {
+        console.error('Error reading comments:', err);
+        res.status(500).json({ error: 'Could not read comments' });
+    }
+});
+
+// Add comment to thread
+app.post('/forum/threads/:id/comments', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const idx = threads.findIndex(t => String(t.id) === String(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Thread not found' });
+        
+        const { userUID, username, text } = req.body || {};
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) return res.status(403).json({ error: 'Sign in to comment' });
+        if (!text || !String(text).trim()) return res.status(400).json({ error: 'Comment text required' });
+        
+        const thread = threads[idx];
+        if (!thread.comments) thread.comments = [];
+        
+        const newComment = {
+            id: String(Date.now()),
+            userUID: uid,
+            username: username || 'User',
+            text: String(text).trim(),
+            createdAt: new Date().toISOString(),
+            upvotes: 0,
+            voters: {}
+        };
+        
+        thread.comments.unshift(newComment);
+        threads[idx] = thread;
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json(newComment);
+    } catch (err) {
+        console.error('Error adding comment:', err);
+        res.status(500).json({ error: 'Could not add comment' });
+    }
+});
+
+// Upvote comment
+app.post('/forum/threads/:id/comments/:commentId/upvote', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const idx = threads.findIndex(t => String(t.id) === String(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Thread not found' });
+        
+        const { userUID } = req.body || {};
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) return res.status(403).json({ error: 'Sign in to vote' });
+        
+        const thread = threads[idx];
+        const comments = thread.comments || [];
+        const cIdx = comments.findIndex(c => String(c.id) === String(req.params.commentId));
+        if (cIdx === -1) return res.status(404).json({ error: 'Comment not found' });
+        
+        const comment = comments[cIdx];
+        if (!comment.voters) comment.voters = {};
+        if (comment.upvotes === undefined || comment.upvotes === null) comment.upvotes = 0;
+        
+        if (comment.voters[String(uid)]) {
+            return res.status(409).json({ error: 'Already voted' });
+        }
+        
+        comment.voters[String(uid)] = true;
+        comment.upvotes += 1;
+        comments[cIdx] = comment;
+        thread.comments = comments;
+        threads[idx] = thread;
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json({ upvotes: comment.upvotes });
+    } catch (err) {
+        console.error('Error upvoting comment:', err);
+        res.status(500).json({ error: 'Could not upvote' });
     }
 });
 

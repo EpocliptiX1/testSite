@@ -1,0 +1,501 @@
+/* =========================================
+   DISCUSSION FORUM STYLES
+   Reddit-like design for movie discussions
+   ========================================= */
+
+.forum-container {
+    display: flex;
+    min-height: calc(100vh - 70px);
+    margin-top: 70px;
+    gap: 20px;
+    padding: 20px 4%;
+}
+
+/* Sidebar: Movies List */
+.forum-sidebar {
+    width: 300px;
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    height: fit-content;
+    position: sticky;
+    top: 90px;
+    box-shadow: var(--shadow-md);
+}
+
+.sidebar-header {
+    margin-bottom: 20px;
+}
+
+.sidebar-header h2 {
+    font-size: 1.3rem;
+    margin-bottom: 15px;
+    color: var(--text-primary);
+}
+
+.add-thread-btn {
+    width: 100%;
+    padding: 12px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+}
+
+.add-thread-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
+}
+
+.add-thread-btn span {
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.movies-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 70vh;
+    overflow-y: auto;
+}
+
+.movie-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.movie-item:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-secondary);
+}
+
+.movie-item.active {
+    background: var(--accent-primary);
+    color: white;
+}
+
+.movie-item-poster {
+    width: 50px;
+    height: 75px;
+    border-radius: 6px;
+    object-fit: cover;
+    background: var(--bg-secondary);
+}
+
+.movie-item-info h4 {
+    font-size: 0.95rem;
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.movie-item.active .movie-item-info h4 {
+    color: white;
+}
+
+.movie-item-info p {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin: 4px 0 0 0;
+}
+
+.movie-item.active .movie-item-info p {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* Main Content Area */
+.forum-main {
+    flex: 1;
+    min-width: 0;
+}
+
+.forum-header {
+    background: var(--bg-card);
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: var(--shadow-md);
+}
+
+.forum-info h1 {
+    font-size: 1.8rem;
+    margin: 0 0 8px 0;
+    color: var(--text-primary);
+}
+
+.forum-info p {
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.create-thread-btn {
+    padding: 12px 24px;
+    background: var(--accent-primary);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.create-thread-btn:hover {
+    background: var(--accent-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(255, 107, 0, 0.4);
+}
+
+/* Threads Container */
+.threads-container {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+/* Individual Thread Card */
+.thread-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    border: 1px solid var(--border-color);
+    display: flex;
+    gap: 15px;
+    box-shadow: var(--shadow-sm);
+}
+
+.thread-card:hover {
+    border-color: var(--accent-secondary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.thread-votes-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    min-width: 50px;
+}
+
+.vote-btn {
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    transition: all 0.2s ease;
+}
+
+.vote-btn:hover {
+    background: var(--bg-hover);
+}
+
+.vote-btn.upvote.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.vote-btn.downvote.active {
+    background: var(--error-color);
+    color: white;
+    border-color: var(--error-color);
+}
+
+.vote-score {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--text-primary);
+}
+
+.thread-content {
+    flex: 1;
+}
+
+.thread-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.thread-thumbnail {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    object-fit: cover;
+    background: var(--bg-secondary);
+}
+
+.thread-info {
+    flex: 1;
+}
+
+.thread-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 6px 0;
+    color: var(--text-primary);
+}
+
+.thread-meta {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.thread-description {
+    color: var(--text-secondary);
+    margin: 12px 0;
+    line-height: 1.5;
+}
+
+.thread-stats {
+    display: flex;
+    gap: 20px;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: 12px;
+}
+
+.thread-stat {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+/* Thread Detail Modal */
+.thread-detail .modal-body {
+    padding: 0;
+}
+
+.thread-detail-content {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.thread-detail-content p {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 20px;
+}
+
+.thread-votes {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Comments Section */
+.comments-section {
+    padding: 20px;
+}
+
+.comments-section h3 {
+    color: var(--text-primary);
+    margin: 0 0 15px 0;
+    font-size: 1.2rem;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.comment-item {
+    background: var(--bg-tertiary);
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.comment-meta {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.comment-text {
+    color: var(--text-secondary);
+    margin: 0 0 10px 0;
+    line-height: 1.5;
+}
+
+.comment-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.comment-upvote {
+    background: none;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+
+.comment-upvote:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-secondary);
+}
+
+.comment-upvote.active {
+    background: var(--accent-primary);
+    color: white;
+    border-color: var(--accent-primary);
+}
+
+.comment-form {
+    display: flex;
+    gap: 10px;
+}
+
+.comment-form input {
+    flex: 1;
+    padding: 12px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+.comment-form input:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
+.comment-form button {
+    padding: 12px 24px;
+}
+
+/* Forum Modal Adjustments */
+.forum-modal {
+    max-width: 700px;
+}
+
+.forum-modal .modal-body {
+    padding: 20px;
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .forum-container {
+        flex-direction: column;
+    }
+
+    .forum-sidebar {
+        width: 100%;
+        position: static;
+        margin-bottom: 20px;
+    }
+
+    .movies-list {
+        max-height: 300px;
+    }
+}
+
+@media (max-width: 768px) {
+    .forum-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .create-thread-btn {
+        width: 100%;
+    }
+
+    .thread-card {
+        flex-direction: column;
+    }
+
+    .thread-votes-column {
+        flex-direction: row;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .thread-header {
+        flex-direction: column;
+    }
+
+    .thread-thumbnail {
+        width: 100%;
+        height: 200px;
+    }
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+}
+
+.empty-state svg,
+.empty-state .icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    color: var(--text-secondary);
+    margin: 0 0 10px 0;
+}
+
+.empty-state p {
+    color: var(--text-muted);
+}
