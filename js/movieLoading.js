@@ -1,15 +1,15 @@
 /* 
    Handles Movie Details Page population, Recommendations, and Global Trailer Fetching
 */
-//AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwHfqak
+//
 // 1. GLOBAL CONFIGURATION
-window.YT_API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwHfqak';
+window.YT_API_KEY = 'u';
 let currentPlaylist = []; 
 let activeTrailerIdx = -1; 
  
 // 2. GLOBAL TRAILER FETCHER (Used by this file AND mainPageControls.js)
 window.fetchYTId = async function(name) {
-    const API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwHfqak'; 
+    const API_KEY = 'u'; 
     try {
         const query = encodeURIComponent(name + " official trailer");
         const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&maxResults=1&type=video&key=${API_KEY}`);
