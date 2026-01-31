@@ -28,7 +28,9 @@
         <ul class="nav-links" id="navLinks">
             <li><a href="/html/indexMain.html" class="myNavLink" data-i18n="nav_home">Home</a></li>
             <li><a href="/html/allMovies.html" class="myNavLink" data-i18n="nav_movies">Movies</a></li>
-            <li><a href="personalList.html" class="myNavLink noborder" data-i18n="nav_mylist">My List</a></li>
+            <li><a href="personalList.html" class="myNavLink" data-i18n="nav_mylist">My List</a></li>
+            <li><a href="/html/customPlaylists.html" class="myNavLink">Playlists</a></li>
+            <li><a href="/html/forum.html" class="myNavLink noborder">Forum</a></li>
         </ul>       
 
         
@@ -296,6 +298,42 @@
                         
                         <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
                     </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Preferences</h3>
+                    
+                    <!-- Theme Toggle -->
+                    <div class="setting-item">
+                        <label>Theme</label>
+                        <div class="theme-selector">
+                            <button class="theme-option" data-theme="dark" onclick="selectThemeInSettings('dark')">
+                                <span class="theme-icon">🌙</span>
+                                <span>Dark</span>
+                            </button>
+                            <button class="theme-option" data-theme="light" onclick="selectThemeInSettings('light')">
+                                <span class="theme-icon">☀️</span>
+                                <span>Light</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Low Data Mode -->
+                    <div class="setting-item">
+                        <label>Low Data Mode</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="lowDataMode" onchange="toggleLowDataMode()">
+                            <label for="lowDataMode" class="toggle-slider"></label>
+                            <span class="toggle-description">Disables auto-playing trailers to save bandwidth</span>
+                        </div>
+                    </div>
+
+                    <!-- DeepL Translation API Key -->
+                    <div class="setting-item">
+                        <label>DeepL API Key (Live Translation)</label>
+                        <input type="password" id="deeplApiKey" placeholder="Enter DeepL API Key">
+                        <small style="color: #888; display: block; margin-top: 5px;">Optional: Enable live translation for content</small>
+                    </div>
+
                     <div class="beta-notice-box">
                         <div class="beta-badge">BETA v0.9</div>
                         <p>You are currently using the <strong>Cinematography Preview</strong> build of Legion Space.</p>

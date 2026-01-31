@@ -4,13 +4,33 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
+const bcrypt = require('bcrypt');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const YT_API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwH2fqak';
+const YOUTUBE_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const BCRYPT_SALT_ROUNDS = 10;
 
 // --- 1. MIDDLEWARE ---
 app.use(cors());
 app.use(express.json()); // Essential for POST requests (Reviews & My List)
+
+// Rate limiting configurations
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
+});
+
+const strictLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // Limit each IP to 20 requests per windowMs for sensitive operations
+    message: 'Too many requests from this IP, please try again later.'
+});
+
+// Apply rate limiting to all routes
+app.use(generalLimiter);
 
 // Serve static files from the root directory
 app.use(express.static(path.join(__dirname, '..')));
@@ -48,24 +68,47 @@ if (!fs.existsSync(usersPath)) {
     fs.writeFileSync(usersPath, JSON.stringify([]));
 }
 
+// --- 3.5 FORUM FILES SETUP ---
+const forumMoviesPath = path.join(reviewsDir, 'forum_movies.json');
+const forumThreadsPath = path.join(reviewsDir, 'forum_threads.json');
+
+if (!fs.existsSync(forumMoviesPath)) {
+    fs.writeFileSync(forumMoviesPath, JSON.stringify([]));
+}
+if (!fs.existsSync(forumThreadsPath)) {
+    fs.writeFileSync(forumThreadsPath, JSON.stringify([]));
+}
+
 // =========================================
 //  4. MOVIE READ ROUTES
 // =========================================
 
-// A. Search by Name
+// A. Search by Name (with click count sorting)
 app.get('/search', (req, res) => {
     const query = req.query.q;
-    const sql = `SELECT * FROM movies WHERE "Movie Name" LIKE ? LIMIT 10`;
+    const sql = `
+        SELECT m.*, COALESCE(c.click_count, 0) as clicks 
+        FROM movies m 
+        LEFT JOIN movie_clicks c ON m.ID = c.movie_id 
+        WHERE "Movie Name" LIKE ? 
+        ORDER BY clicks DESC, Rating DESC 
+        LIMIT 10
+    `;
     db.all(sql, [`%${query}%`], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
 });
 
-// B. Get Single Movie by ID
+// B. Get Single Movie by ID (with click tracking)
 app.get('/movie/:id', (req, res) => {
     const id = req.params.id;
-    const sql = `SELECT * FROM movies WHERE ID = ?`;
+    const sql = `
+        SELECT m.*, COALESCE(c.click_count, 0) as clicks 
+        FROM movies m 
+        LEFT JOIN movie_clicks c ON m.ID = c.movie_id 
+        WHERE m.ID = ?
+    `;
     db.get(sql, [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: "Movie not found" });
@@ -73,7 +116,25 @@ app.get('/movie/:id', (req, res) => {
     });
 });
 
-// C. The "Super" Library Filter (Kept the complex version)
+// C. Track Movie Click
+app.post('/movie/:id/click', (req, res) => {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid movie ID" });
+    
+    db.run(
+        'INSERT INTO movie_clicks (movie_id, click_count) VALUES (?, 1) ON CONFLICT(movie_id) DO UPDATE SET click_count = click_count + 1',
+        [id],
+        function(err) {
+            if (err) {
+                console.error('Error tracking click:', err);
+                return res.status(500).json({ error: "Could not track click" });
+            }
+            res.json({ success: true, clicks: this.changes });
+        }
+    );
+});
+
+// D. The "Super" Library Filter (Kept the complex version)
 app.get('/movies/library', (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
@@ -85,46 +146,49 @@ app.get('/movies/library', (req, res) => {
     const actor = req.query.actor || '';
     const director = req.query.director || '';
 
-    // Start building the query
-    let sql = `SELECT * FROM movies WHERE 1=1`;
+    // Start building the query - join with click tracking
+    let sql = `SELECT m.*, COALESCE(c.click_count, 0) as clicks FROM movies m LEFT JOIN movie_clicks c ON m.ID = c.movie_id WHERE 1=1`;
     let params = [];
 
     // 1. Filter by Year (Released after X)
-    sql += ` AND CAST(SUBSTR(release_date, -4) AS INTEGER) >= ?`;
+    sql += ` AND CAST(SUBSTR(m.release_date, -4) AS INTEGER) >= ?`;
     params.push(minYear);
 
     // 2. Filter by Genre
     if (genre) {
-        sql += ` AND Genre LIKE ?`;
+        sql += ` AND m.Genre LIKE ?`;
         params.push(`%${genre}%`);
     }
 
     // 3. Filter by Actor
     if (actor) {
-        sql += ` AND Stars LIKE ?`;
+        sql += ` AND m.Stars LIKE ?`;
         params.push(`%${actor}%`);
     }
 
     // 4. Filter by Director
     if (director) {
-        sql += ` AND Directors LIKE ?`;
+        sql += ` AND m.Directors LIKE ?`;
         params.push(`%${director}%`);
     }
 
     // 5. Apply Sorting
-    let orderBy = `CAST(Rating AS FLOAT) DESC`; // Default
+    let orderBy = `CAST(m.Rating AS FLOAT) DESC`; // Default
 
     if (sortMode === 'date_desc') {
-        orderBy = `CAST(SUBSTR(release_date, -4) AS INTEGER) DESC`;
+        orderBy = `CAST(SUBSTR(m.release_date, -4) AS INTEGER) DESC`;
     } 
     else if (sortMode === 'duration_desc') {
-        orderBy = `CAST(REPLACE(Runtime, ' min', '') AS INTEGER) DESC`;
+        orderBy = `CAST(REPLACE(m.Runtime, ' min', '') AS INTEGER) DESC`;
     } 
     else if (sortMode === 'success_desc') {
-        orderBy = `((CAST(revenue AS FLOAT) - CAST(budget AS FLOAT)) / NULLIF(CAST(budget AS FLOAT), 0)) DESC`;
+        orderBy = `((CAST(m.revenue AS FLOAT) - CAST(m.budget AS FLOAT)) / NULLIF(CAST(m.budget AS FLOAT), 0)) DESC`;
     } 
     else if (sortMode === 'success_asc') {
-        orderBy = `((CAST(revenue AS FLOAT) - CAST(budget AS FLOAT)) / NULLIF(CAST(budget AS FLOAT), 0)) ASC`;
+        orderBy = `((CAST(m.revenue AS FLOAT) - CAST(m.budget AS FLOAT)) / NULLIF(CAST(m.budget AS FLOAT), 0)) ASC`;
+    }
+    else if (sortMode === 'clicks_desc') {
+        orderBy = `clicks DESC`;
     }
 
     // Combine everything
@@ -202,13 +266,35 @@ app.post('/movies/get-list', (req, res) => {
 });
 
 // =========================================
-//  7. YOUTUBE TRAILER SEARCH (API)
+//  7. YOUTUBE TRAILER SEARCH (API) with Caching
 // =========================================
 app.get('/youtube/search', async (req, res) => {
     const movieName = req.query.name;
     if (!movieName) return res.status(400).json({ error: "Movie name required" });
     
     try {
+        const normalizedName = movieName.toLowerCase().trim();
+        const now = Date.now();
+        
+        // Check cache first
+        const cached = await new Promise((resolve, reject) => {
+            db.get(
+                'SELECT video_id, cached_at FROM youtube_cache WHERE movie_name = ?',
+                [normalizedName],
+                (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                }
+            );
+        });
+        
+        // If cache exists and not expired, return it
+        if (cached && (now - cached.cached_at) < YOUTUBE_CACHE_EXPIRY_MS) {
+            console.log(`[YouTube] Cache hit: ${movieName} -> ${cached.video_id}`);
+            return res.json({ videoId: cached.video_id, cached: true });
+        }
+        
+        // Cache miss or expired, fetch from API
         const query = encodeURIComponent(movieName + " official trailer");
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&maxResults=1&type=video&key=${YT_API_KEY}`;
         console.log(`[YouTube] Searching: ${movieName}`);
@@ -223,7 +309,20 @@ app.get('/youtube/search', async (req, res) => {
         
         const videoId = data.items?.[0]?.id?.videoId || "";
         console.log(`[YouTube] Found video: ${videoId || "None"}`);
-        res.json({ videoId });
+        
+        // Save to cache
+        if (videoId) {
+            db.run(
+                'INSERT OR REPLACE INTO youtube_cache (movie_name, video_id, cached_at) VALUES (?, ?, ?)',
+                [normalizedName, videoId, now],
+                (err) => {
+                    if (err) console.error('[YouTube] Cache save error:', err);
+                    else console.log(`[YouTube] Cached: ${movieName} -> ${videoId}`);
+                }
+            );
+        }
+        
+        res.json({ videoId, cached: false });
     } catch (err) {
         console.error("[YouTube] Network error:", err);
         res.status(500).json({ error: "Could not fetch trailer" });
@@ -298,7 +397,7 @@ if (!fs.existsSync(playlistsPath)) {
 // =========================================
 
 // Save or update user record
-app.post('/users', (req, res) => {
+app.post('/users', async (req, res) => {
     try {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
@@ -319,6 +418,18 @@ app.post('/users', (req, res) => {
 
         const uidNum = parseInt(userUID, 10);
         const idx = users.findIndex(u => parseInt(u.userUID, 10) === uidNum);
+        
+        // Hash password if provided and not already hashed
+        let hashedPassword = '';
+        if (userPassword) {
+            // Check if password is already hashed (bcrypt hashes start with $2b$)
+            if (userPassword.startsWith('$2b$')) {
+                hashedPassword = userPassword;
+            } else {
+                hashedPassword = await bcrypt.hash(userPassword, BCRYPT_SALT_ROUNDS);
+            }
+        }
+        
         const userRecord = {
             username,
             userUID: uidNum,
@@ -327,7 +438,7 @@ app.post('/users', (req, res) => {
             searchCount: parseInt(searchCount, 10) || 0,
             viewCount: parseInt(viewCount, 10) || 0,
             allUIDs: Array.isArray(allUIDs) ? allUIDs : [],
-            userPassword: userPassword || ''
+            userPassword: hashedPassword || (idx !== -1 ? users[idx].userPassword : '')
         };
 
         if (idx === -1) users.push(userRecord);
@@ -342,7 +453,7 @@ app.post('/users', (req, res) => {
 });
 
 // Register new user (assign unique UID, prevent email duplicates)
-app.post('/users/register', (req, res) => {
+app.post('/users/register', strictLimiter, async (req, res) => {
     try {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
@@ -365,6 +476,9 @@ app.post('/users/register', (req, res) => {
         const maxUID = users.reduce((max, u) => Math.max(max, parseInt(u.userUID, 10) || 0), 0);
         const newUID = maxUID + 1;
 
+        // Hash the password before storing
+        const hashedPassword = await bcrypt.hash(userPassword, BCRYPT_SALT_ROUNDS);
+
         const userRecord = {
             username,
             userUID: newUID,
@@ -373,7 +487,7 @@ app.post('/users/register', (req, res) => {
             searchCount: 0,
             viewCount: 0,
             allUIDs: users.map(u => parseInt(u.userUID, 10)).filter(n => !Number.isNaN(n)).concat(newUID),
-            userPassword
+            userPassword: hashedPassword
         };
 
         users.push(userRecord);
@@ -386,7 +500,7 @@ app.post('/users/register', (req, res) => {
 });
 
 // Authenticate user by email + password
-app.post('/users/auth', (req, res) => {
+app.post('/users/auth', strictLimiter, async (req, res) => {
     try {
         const { userEmail, userPassword } = req.body || {};
         if (!userEmail || !userPassword) {
@@ -396,11 +510,17 @@ app.post('/users/auth', (req, res) => {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
         const user = users.find(u =>
-            String(u.userEmail).toLowerCase() === String(userEmail).toLowerCase() &&
-            String(u.userPassword) === String(userPassword)
+            String(u.userEmail).toLowerCase() === String(userEmail).toLowerCase()
         );
 
         if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+        
+        // Compare password with bcrypt
+        const passwordMatch = await bcrypt.compare(userPassword, user.userPassword);
+        if (!passwordMatch) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
         res.json(user);
     } catch (err) {
         console.error('Error authenticating user:', err);
@@ -708,6 +828,266 @@ app.delete('/playlists/:id/movies/:movieId', (req, res) => {
     } catch (err) {
         console.error('Error removing movie from playlist:', err);
         res.status(500).json({ error: 'Could not remove movie' });
+    }
+});
+
+// =========================================
+//  9.5 FORUM ROUTES
+// =========================================
+
+// Get all forum movies
+app.get('/forum/movies', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumMoviesPath, 'utf8');
+        const movies = JSON.parse(data) || [];
+        
+        // Count threads for each movie
+        const threadsData = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(threadsData) || [];
+        
+        const moviesWithCounts = movies.map(movie => ({
+            ...movie,
+            threadCount: threads.filter(t => String(t.movieId) === String(movie.movieId)).length
+        }));
+        
+        res.json(moviesWithCounts);
+    } catch (err) {
+        console.error('Error reading forum movies:', err);
+        res.status(500).json({ error: 'Could not read forum movies' });
+    }
+});
+
+// Add movie to forum
+app.post('/forum/movies', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumMoviesPath, 'utf8');
+        const movies = JSON.parse(data) || [];
+        const { movieId, movieTitle, poster, genre, userUID, username } = req.body;
+        
+        if (!movieId || !movieTitle) {
+            return res.status(400).json({ error: 'movieId and movieTitle required' });
+        }
+        
+        // Check if movie already exists
+        const exists = movies.find(m => String(m.movieId) === String(movieId));
+        if (exists) {
+            return res.status(200).json({ message: 'Movie already in forum', movie: exists });
+        }
+        
+        const newMovie = {
+            movieId: String(movieId),
+            movieTitle,
+            poster: poster || '',
+            genre: genre || '',
+            addedBy: username || 'User',
+            addedByUID: parseInt(userUID, 10) || 0,
+            createdAt: new Date().toISOString()
+        };
+        
+        movies.unshift(newMovie);
+        fs.writeFileSync(forumMoviesPath, JSON.stringify(movies, null, 2));
+        res.json(newMovie);
+    } catch (err) {
+        console.error('Error adding forum movie:', err);
+        res.status(500).json({ error: 'Could not add movie' });
+    }
+});
+
+// Get threads for a movie
+app.get('/forum/threads', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        let threads = JSON.parse(data) || [];
+        
+        const movieId = req.query.movieId;
+        if (movieId) {
+            threads = threads.filter(t => String(t.movieId) === String(movieId));
+        }
+        
+        // Count comments for each thread
+        threads = threads.map(thread => ({
+            ...thread,
+            commentCount: (thread.comments || []).length
+        }));
+        
+        // Sort by score (descending)
+        threads.sort((a, b) => (b.score || 0) - (a.score || 0));
+        
+        res.json(threads);
+    } catch (err) {
+        console.error('Error reading threads:', err);
+        res.status(500).json({ error: 'Could not read threads' });
+    }
+});
+
+// Create new thread
+app.post('/forum/threads', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const { movieId, title, description, image, userUID, username } = req.body;
+        
+        if (!movieId || !title || !description) {
+            return res.status(400).json({ error: 'movieId, title, and description required' });
+        }
+        
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) {
+            return res.status(403).json({ error: 'Sign in to create threads' });
+        }
+        
+        const newThread = {
+            id: String(Date.now()),
+            movieId: String(movieId),
+            title: String(title).trim(),
+            description: String(description).trim(),
+            image: image || '',
+            username: username || 'User',
+            userUID: uid,
+            score: 0,
+            voters: {},
+            comments: [],
+            createdAt: new Date().toISOString()
+        };
+        
+        threads.unshift(newThread);
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json(newThread);
+    } catch (err) {
+        console.error('Error creating thread:', err);
+        res.status(500).json({ error: 'Could not create thread' });
+    }
+});
+
+// Vote on thread
+app.post('/forum/threads/:id/vote', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const idx = threads.findIndex(t => String(t.id) === String(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Thread not found' });
+        
+        const { userUID, vote } = req.body || {};
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) {
+            return res.status(403).json({ error: 'Sign in to vote' });
+        }
+        if (vote !== 'up' && vote !== 'down') {
+            return res.status(400).json({ error: 'Invalid vote' });
+        }
+        
+        const thread = threads[idx];
+        if (!thread.voters) thread.voters = {};
+        if (thread.score === undefined || thread.score === null) thread.score = 0;
+        
+        const prevVote = thread.voters[String(uid)] || null;
+        if (prevVote === vote) {
+            return res.status(409).json({ error: 'Already voted' });
+        }
+        
+        // Adjust score based on vote change
+        if (prevVote === 'up') thread.score -= 1;
+        if (prevVote === 'down') thread.score += 1;
+        
+        thread.voters[String(uid)] = vote;
+        if (vote === 'up') thread.score += 1;
+        if (vote === 'down') thread.score -= 1;
+        
+        threads[idx] = thread;
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json({ score: thread.score });
+    } catch (err) {
+        console.error('Error voting on thread:', err);
+        res.status(500).json({ error: 'Could not vote' });
+    }
+});
+
+// Get comments for a thread
+app.get('/forum/threads/:id/comments', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const thread = threads.find(t => String(t.id) === String(req.params.id));
+        if (!thread) return res.status(404).json({ error: 'Thread not found' });
+        
+        res.json(thread.comments || []);
+    } catch (err) {
+        console.error('Error reading comments:', err);
+        res.status(500).json({ error: 'Could not read comments' });
+    }
+});
+
+// Add comment to thread
+app.post('/forum/threads/:id/comments', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const idx = threads.findIndex(t => String(t.id) === String(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Thread not found' });
+        
+        const { userUID, username, text } = req.body || {};
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) return res.status(403).json({ error: 'Sign in to comment' });
+        if (!text || !String(text).trim()) return res.status(400).json({ error: 'Comment text required' });
+        
+        const thread = threads[idx];
+        if (!thread.comments) thread.comments = [];
+        
+        const newComment = {
+            id: String(Date.now()),
+            userUID: uid,
+            username: username || 'User',
+            text: String(text).trim(),
+            createdAt: new Date().toISOString(),
+            upvotes: 0,
+            voters: {}
+        };
+        
+        thread.comments.unshift(newComment);
+        threads[idx] = thread;
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json(newComment);
+    } catch (err) {
+        console.error('Error adding comment:', err);
+        res.status(500).json({ error: 'Could not add comment' });
+    }
+});
+
+// Upvote comment
+app.post('/forum/threads/:id/comments/:commentId/upvote', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const idx = threads.findIndex(t => String(t.id) === String(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Thread not found' });
+        
+        const { userUID } = req.body || {};
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) return res.status(403).json({ error: 'Sign in to vote' });
+        
+        const thread = threads[idx];
+        const comments = thread.comments || [];
+        const cIdx = comments.findIndex(c => String(c.id) === String(req.params.commentId));
+        if (cIdx === -1) return res.status(404).json({ error: 'Comment not found' });
+        
+        const comment = comments[cIdx];
+        if (!comment.voters) comment.voters = {};
+        if (comment.upvotes === undefined || comment.upvotes === null) comment.upvotes = 0;
+        
+        if (comment.voters[String(uid)]) {
+            return res.status(409).json({ error: 'Already voted' });
+        }
+        
+        comment.voters[String(uid)] = true;
+        comment.upvotes += 1;
+        comments[cIdx] = comment;
+        thread.comments = comments;
+        threads[idx] = thread;
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json({ upvotes: comment.upvotes });
+    } catch (err) {
+        console.error('Error upvoting comment:', err);
+        res.status(500).json({ error: 'Could not upvote' });
     }
 });
 
