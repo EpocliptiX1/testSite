@@ -1375,3 +1375,164 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { passive: true });
     }
 });
+/* =========================================
+   THEME AND LANGUAGE CONTROLS
+   ========================================= */
+
+// Toggle theme between dark and light
+function toggleSiteTheme() {
+    const newTheme = window.themeManager.toggleTheme();
+    updateThemeButton(newTheme);
+}
+
+// Update theme button UI
+function updateThemeButton(theme) {
+    const icon = document.getElementById('themeIcon');
+    const label = document.getElementById('themeLabel');
+    
+    if (theme === 'dark') {
+        icon.textContent = '🌙';
+        label.textContent = 'Dark';
+    } else {
+        icon.textContent = '☀️';
+        label.textContent = 'Light';
+    }
+}
+
+// Initialize theme button on page load
+window.addEventListener('DOMContentLoaded', () => {
+    const currentTheme = window.themeManager.getCurrentTheme();
+    updateThemeButton(currentTheme);
+});
+
+// Language selection functions
+function toggleLanguageMenu() {
+    const dropdown = document.getElementById('languageDropdown');
+    dropdown.classList.toggle('active');
+}
+
+function selectLanguage(lang) {
+    window.i18n.changeLanguage(lang);
+    updateLanguageButton(lang);
+    toggleLanguageMenu();
+}
+
+function updateLanguageButton(lang) {
+    const flags = {
+        'en': { flag: '��🇧', code: 'EN' },
+        'ru': { flag: '🇷🇺', code: 'RU' },
+        'kz': { flag: '🇰🇿', code: 'KZ' }
+    };
+    
+    const currentFlag = document.getElementById('currentFlag');
+    const currentLangCode = document.getElementById('currentLangCode');
+    
+    if (flags[lang]) {
+        currentFlag.textContent = flags[lang].flag;
+        currentLangCode.textContent = flags[lang].code;
+    }
+    
+    // Update selected state in dropdown
+    document.querySelectorAll('.language-option').forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    const selectedOption = document.querySelector(`.language-option[onclick*="${lang}"]`);
+    if (selectedOption) {
+        selectedOption.classList.add('selected');
+    }
+}
+
+// Initialize language button on page load
+window.addEventListener('DOMContentLoaded', () => {
+    const currentLang = window.i18n.getCurrentLanguage();
+    updateLanguageButton(currentLang);
+});
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.language-selector')) {
+        const dropdown = document.getElementById('languageDropdown');
+        if (dropdown) {
+            dropdown.classList.remove('active');
+        }
+    }
+});
+
+/* =========================================
+   ENHANCED CREDENTIAL MANAGEMENT
+   ========================================= */
+
+// Override the original signup handler to include encryption
+const originalHandleSignup = window.handleSignup;
+window.handleSignup = async function(event) {
+    event.preventDefault();
+    
+    const username = document.getElementById('signupUser').value.trim();
+    const email = document.getElementById('signupEmail').value.trim();
+    const password = document.getElementById('signupPassword').value;
+    const tier = document.getElementById('signupTier').value;
+    
+    if (!username || !email || !password) {
+        showToast('Please fill all fields', 'error');
+        return;
+    }
+    
+    try {
+        // Save credentials encrypted
+        window.crypto_utils.CredentialManager.saveCredentials(email, password);
+        
+        // Continue with original signup logic
+        const response = await fetch('http://localhost:3000/users/register', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                username,
+                userEmail: email,
+                userPassword: password,
+                userTier: tier
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            // Store user data
+            localStorage.setItem('userUID', data.userUID);
+            localStorage.setItem('username', data.username);
+            localStorage.setItem('userEmail', data.userEmail);
+            localStorage.setItem('userTier', data.userTier);
+            localStorage.setItem('searchCount', data.searchCount || 0);
+            localStorage.setItem('viewCount', data.viewCount || 0);
+            
+            showToast(window.i18n.t('notif_signup_success'), 'success');
+            closeSignupModal();
+            loadUserProfile();
+        } else {
+            showToast(data.error || window.i18n.t('notif_error'), 'error');
+        }
+    } catch (err) {
+        console.error('Signup error:', err);
+        showToast(window.i18n.t('notif_error'), 'error');
+    }
+};
+
+// Add auto-fill for saved credentials
+window.addEventListener('DOMContentLoaded', () => {
+    const signInModal = document.getElementById('signupModal');
+    if (signInModal && window.crypto_utils.CredentialManager.hasCredentials()) {
+        const credentials = window.crypto_utils.CredentialManager.getCredentials();
+        if (credentials) {
+            const emailField = document.getElementById('signupEmail');
+            const passwordField = document.getElementById('signupPassword');
+            
+            if (emailField && credentials.email) {
+                emailField.value = credentials.email;
+            }
+            if (passwordField && credentials.password) {
+                passwordField.value = credentials.password;
+            }
+        }
+    }
+});
+
+console.log('✅ Theme and language controls loaded');
