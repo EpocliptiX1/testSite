@@ -1,0 +1,22 @@
+# Dependencies
+node_modules/
+Backend/node_modules/
+
+# Build artifacts
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+/tmp/
