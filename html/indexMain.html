@@ -10,6 +10,8 @@
     <script src="/js/encryption.js"></script>
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
+    <script src="/js/netflixFeatures.js"></script>
+    <script src="/js/keyboardShortcuts.js"></script>
     <script src="/js/movieLoading.js"></script>
     <script src="/js/mainPageControls.js"></script>
 </head>
@@ -152,6 +154,12 @@
     </header>
 
     <main class="container" id="subSec" style="padding-bottom: 0;">
+        
+        <!-- Continue Watching Section -->
+        <section class="row" id="continueWatchingSection" style="display: none;">
+            <h2 class="row-title" data-i18n="section_continue_watching">Continue Watching</h2>
+            <div class="horizontal-scroll-row" id="rowContinueWatching"></div>
+        </section>
         
         <section class="row">
             <h2 class="row-title" data-i18n="section_top_rated">Top Rated</h2>

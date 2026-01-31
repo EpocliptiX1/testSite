@@ -1536,3 +1536,34 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 console.log('✅ Theme and language controls loaded');
+
+/* =========================================
+   NETFLIX FEATURES INITIALIZATION
+   ========================================= */
+
+// Initialize continue watching section
+function initContinueWatching() {
+    if (window.WatchHistoryUI) {
+        const continueWatchingItems = window.WatchHistory.getContinueWatching();
+        const section = document.getElementById('continueWatchingSection');
+        
+        if (continueWatchingItems.length > 0 && section) {
+            section.style.display = 'block';
+            window.WatchHistoryUI.renderContinueWatching('rowContinueWatching');
+        } else if (section) {
+            section.style.display = 'none';
+        }
+    }
+}
+
+// Add to page initialization
+window.addEventListener('DOMContentLoaded', () => {
+    // Initialize continue watching after a short delay
+    setTimeout(initContinueWatching, 500);
+});
+
+// Refresh continue watching when user interacts with movies
+window.addEventListener('movieViewed', () => {
+    setTimeout(initContinueWatching, 1000);
+});
+
