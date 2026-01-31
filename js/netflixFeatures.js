@@ -221,9 +221,14 @@ const SmartRecommendations = {
         }
         
         // Fetch movies from top genres
+        // Use relative URL to work in all environments
+        const apiBase = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : '';
+        
         try {
             const promises = preferences.topGenres.map(genre =>
-                fetch(`http://localhost:3000/movies/library?genre=${genre}&limit=${Math.ceil(limit / preferences.topGenres.length)}&sort=rating_desc`)
+                fetch(`${apiBase}/movies/library?genre=${genre}&limit=${Math.ceil(limit / preferences.topGenres.length)}&sort=rating_desc`)
                     .then(res => res.json())
             );
             
@@ -251,8 +256,13 @@ const SmartRecommendations = {
     
     // Get popular movies as fallback
     async getPopularMovies(limit = 20) {
+        // Use relative URL to work in all environments
+        const apiBase = window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : '';
+            
         try {
-            const response = await fetch(`http://localhost:3000/movies/library?limit=${limit}&sort=rating_desc`);
+            const response = await fetch(`${apiBase}/movies/library?limit=${limit}&sort=rating_desc`);
             return await response.json();
         } catch (error) {
             console.error('Error getting popular movies:', error);

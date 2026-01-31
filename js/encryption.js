@@ -1,11 +1,20 @@
 /* =========================================
    CREDENTIAL ENCRYPTION SYSTEM
    Uses simple XOR cipher + Base64 for basic encryption
-   Note: This is basic encryption for demo purposes.
-   For production, use proper encryption libraries.
+   
+   ⚠️ SECURITY NOTE: This is DEMO/EDUCATIONAL encryption only.
+   For production use:
+   - Use server-side encryption
+   - Implement proper key management (never hardcode keys)
+   - Use industry-standard algorithms (AES-256, bcrypt)
+   - Consider libraries like crypto-js or Web Crypto API
+   
+   The encryption key below is intentionally visible in client-side
+   code for educational purposes. This provides basic obfuscation
+   but is NOT suitable for production security.
    ========================================= */
 
-// Simple encryption key (in production, this should be more complex)
+// Simple encryption key (DEMO ONLY - not for production)
 const ENCRYPTION_KEY = 'LegionSpace2026SecureKey!@#';
 
 // XOR cipher for encryption/decryption

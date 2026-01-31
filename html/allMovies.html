@@ -36,29 +36,29 @@
             <div class="nav-tools">
                 <!-- Language Selector -->
                 <div class="language-selector">
-                    <button class="language-btn" onclick="toggleLanguageMenu()">
-                        <span class="language-flag" id="currentFlag">🇬🇧</span>
+                    <button class="language-btn" onclick="toggleLanguageMenu()" aria-label="Select language">
+                        <span class="language-flag" id="currentFlag" role="img" aria-label="Current language flag">🇬🇧</span>
                         <span id="currentLangCode">EN</span>
                     </button>
-                    <div class="language-dropdown" id="languageDropdown">
-                        <div class="language-option" onclick="selectLanguage('en')">
-                            <span class="language-flag">🇬🇧</span>
+                    <div class="language-dropdown" id="languageDropdown" role="menu">
+                        <div class="language-option" onclick="selectLanguage('en')" role="menuitem">
+                            <span class="language-flag" role="img" aria-label="English">🇬🇧</span>
                             <span>English</span>
                         </div>
-                        <div class="language-option" onclick="selectLanguage('ru')">
-                            <span class="language-flag">🇷🇺</span>
+                        <div class="language-option" onclick="selectLanguage('ru')" role="menuitem">
+                            <span class="language-flag" role="img" aria-label="Russian">🇷🇺</span>
                             <span>Русский</span>
                         </div>
-                        <div class="language-option" onclick="selectLanguage('kz')">
-                            <span class="language-flag">🇰🇿</span>
+                        <div class="language-option" onclick="selectLanguage('kz')" role="menuitem">
+                            <span class="language-flag" role="img" aria-label="Kazakh">🇰🇿</span>
                             <span>Қазақша</span>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Theme Toggle -->
-                <button class="theme-toggle" onclick="toggleSiteTheme()">
-                    <span class="theme-toggle-icon" id="themeIcon">🌙</span>
+                <button class="theme-toggle" onclick="toggleSiteTheme()" aria-label="Toggle theme">
+                    <span class="theme-toggle-icon" id="themeIcon" role="img" aria-label="Theme icon">🌙</span>
                     <span id="themeLabel">Dark</span>
                 </button>
                 
