@@ -4,6 +4,7 @@ const cors = require('cors');
 const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
+const bcrypt = require('bcrypt');
 
 const app = express();
 const YT_API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwH2fqak';
@@ -52,20 +53,32 @@ if (!fs.existsSync(usersPath)) {
 //  4. MOVIE READ ROUTES
 // =========================================
 
-// A. Search by Name
+// A. Search by Name (with click count sorting)
 app.get('/search', (req, res) => {
     const query = req.query.q;
-    const sql = `SELECT * FROM movies WHERE "Movie Name" LIKE ? LIMIT 10`;
+    const sql = `
+        SELECT m.*, COALESCE(c.click_count, 0) as clicks 
+        FROM movies m 
+        LEFT JOIN movie_clicks c ON m.ID = c.movie_id 
+        WHERE "Movie Name" LIKE ? 
+        ORDER BY clicks DESC, Rating DESC 
+        LIMIT 10
+    `;
     db.all(sql, [`%${query}%`], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
 });
 
-// B. Get Single Movie by ID
+// B. Get Single Movie by ID (with click tracking)
 app.get('/movie/:id', (req, res) => {
     const id = req.params.id;
-    const sql = `SELECT * FROM movies WHERE ID = ?`;
+    const sql = `
+        SELECT m.*, COALESCE(c.click_count, 0) as clicks 
+        FROM movies m 
+        LEFT JOIN movie_clicks c ON m.ID = c.movie_id 
+        WHERE m.ID = ?
+    `;
     db.get(sql, [id], (err, row) => {
         if (err) return res.status(500).json({ error: err.message });
         if (!row) return res.status(404).json({ error: "Movie not found" });
@@ -73,7 +86,25 @@ app.get('/movie/:id', (req, res) => {
     });
 });
 
-// C. The "Super" Library Filter (Kept the complex version)
+// C. Track Movie Click
+app.post('/movie/:id/click', (req, res) => {
+    const id = parseInt(req.params.id);
+    if (!id) return res.status(400).json({ error: "Invalid movie ID" });
+    
+    db.run(
+        'INSERT INTO movie_clicks (movie_id, click_count) VALUES (?, 1) ON CONFLICT(movie_id) DO UPDATE SET click_count = click_count + 1',
+        [id],
+        function(err) {
+            if (err) {
+                console.error('Error tracking click:', err);
+                return res.status(500).json({ error: "Could not track click" });
+            }
+            res.json({ success: true, clicks: this.changes });
+        }
+    );
+});
+
+// D. The "Super" Library Filter (Kept the complex version)
 app.get('/movies/library', (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
@@ -85,46 +116,49 @@ app.get('/movies/library', (req, res) => {
     const actor = req.query.actor || '';
     const director = req.query.director || '';
 
-    // Start building the query
-    let sql = `SELECT * FROM movies WHERE 1=1`;
+    // Start building the query - join with click tracking
+    let sql = `SELECT m.*, COALESCE(c.click_count, 0) as clicks FROM movies m LEFT JOIN movie_clicks c ON m.ID = c.movie_id WHERE 1=1`;
     let params = [];
 
     // 1. Filter by Year (Released after X)
-    sql += ` AND CAST(SUBSTR(release_date, -4) AS INTEGER) >= ?`;
+    sql += ` AND CAST(SUBSTR(m.release_date, -4) AS INTEGER) >= ?`;
     params.push(minYear);
 
     // 2. Filter by Genre
     if (genre) {
-        sql += ` AND Genre LIKE ?`;
+        sql += ` AND m.Genre LIKE ?`;
         params.push(`%${genre}%`);
     }
 
     // 3. Filter by Actor
     if (actor) {
-        sql += ` AND Stars LIKE ?`;
+        sql += ` AND m.Stars LIKE ?`;
         params.push(`%${actor}%`);
     }
 
     // 4. Filter by Director
     if (director) {
-        sql += ` AND Directors LIKE ?`;
+        sql += ` AND m.Directors LIKE ?`;
         params.push(`%${director}%`);
     }
 
     // 5. Apply Sorting
-    let orderBy = `CAST(Rating AS FLOAT) DESC`; // Default
+    let orderBy = `CAST(m.Rating AS FLOAT) DESC`; // Default
 
     if (sortMode === 'date_desc') {
-        orderBy = `CAST(SUBSTR(release_date, -4) AS INTEGER) DESC`;
+        orderBy = `CAST(SUBSTR(m.release_date, -4) AS INTEGER) DESC`;
     } 
     else if (sortMode === 'duration_desc') {
-        orderBy = `CAST(REPLACE(Runtime, ' min', '') AS INTEGER) DESC`;
+        orderBy = `CAST(REPLACE(m.Runtime, ' min', '') AS INTEGER) DESC`;
     } 
     else if (sortMode === 'success_desc') {
-        orderBy = `((CAST(revenue AS FLOAT) - CAST(budget AS FLOAT)) / NULLIF(CAST(budget AS FLOAT), 0)) DESC`;
+        orderBy = `((CAST(m.revenue AS FLOAT) - CAST(m.budget AS FLOAT)) / NULLIF(CAST(m.budget AS FLOAT), 0)) DESC`;
     } 
     else if (sortMode === 'success_asc') {
-        orderBy = `((CAST(revenue AS FLOAT) - CAST(budget AS FLOAT)) / NULLIF(CAST(budget AS FLOAT), 0)) ASC`;
+        orderBy = `((CAST(m.revenue AS FLOAT) - CAST(m.budget AS FLOAT)) / NULLIF(CAST(m.budget AS FLOAT), 0)) ASC`;
+    }
+    else if (sortMode === 'clicks_desc') {
+        orderBy = `clicks DESC`;
     }
 
     // Combine everything
@@ -202,13 +236,36 @@ app.post('/movies/get-list', (req, res) => {
 });
 
 // =========================================
-//  7. YOUTUBE TRAILER SEARCH (API)
+//  7. YOUTUBE TRAILER SEARCH (API) with Caching
 // =========================================
 app.get('/youtube/search', async (req, res) => {
     const movieName = req.query.name;
     if (!movieName) return res.status(400).json({ error: "Movie name required" });
     
     try {
+        const normalizedName = movieName.toLowerCase().trim();
+        const cacheExpiryMs = 24 * 60 * 60 * 1000; // 24 hours
+        const now = Date.now();
+        
+        // Check cache first
+        const cached = await new Promise((resolve, reject) => {
+            db.get(
+                'SELECT video_id, cached_at FROM youtube_cache WHERE movie_name = ?',
+                [normalizedName],
+                (err, row) => {
+                    if (err) reject(err);
+                    else resolve(row);
+                }
+            );
+        });
+        
+        // If cache exists and not expired, return it
+        if (cached && (now - cached.cached_at) < cacheExpiryMs) {
+            console.log(`[YouTube] Cache hit: ${movieName} -> ${cached.video_id}`);
+            return res.json({ videoId: cached.video_id, cached: true });
+        }
+        
+        // Cache miss or expired, fetch from API
         const query = encodeURIComponent(movieName + " official trailer");
         const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&maxResults=1&type=video&key=${YT_API_KEY}`;
         console.log(`[YouTube] Searching: ${movieName}`);
@@ -223,7 +280,20 @@ app.get('/youtube/search', async (req, res) => {
         
         const videoId = data.items?.[0]?.id?.videoId || "";
         console.log(`[YouTube] Found video: ${videoId || "None"}`);
-        res.json({ videoId });
+        
+        // Save to cache
+        if (videoId) {
+            db.run(
+                'INSERT OR REPLACE INTO youtube_cache (movie_name, video_id, cached_at) VALUES (?, ?, ?)',
+                [normalizedName, videoId, now],
+                (err) => {
+                    if (err) console.error('[YouTube] Cache save error:', err);
+                    else console.log(`[YouTube] Cached: ${movieName} -> ${videoId}`);
+                }
+            );
+        }
+        
+        res.json({ videoId, cached: false });
     } catch (err) {
         console.error("[YouTube] Network error:", err);
         res.status(500).json({ error: "Could not fetch trailer" });
@@ -298,7 +368,7 @@ if (!fs.existsSync(playlistsPath)) {
 // =========================================
 
 // Save or update user record
-app.post('/users', (req, res) => {
+app.post('/users', async (req, res) => {
     try {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
@@ -319,6 +389,18 @@ app.post('/users', (req, res) => {
 
         const uidNum = parseInt(userUID, 10);
         const idx = users.findIndex(u => parseInt(u.userUID, 10) === uidNum);
+        
+        // Hash password if provided and not already hashed
+        let hashedPassword = '';
+        if (userPassword) {
+            // Check if password is already hashed (bcrypt hashes start with $2b$)
+            if (userPassword.startsWith('$2b$')) {
+                hashedPassword = userPassword;
+            } else {
+                hashedPassword = await bcrypt.hash(userPassword, 10);
+            }
+        }
+        
         const userRecord = {
             username,
             userUID: uidNum,
@@ -327,7 +409,7 @@ app.post('/users', (req, res) => {
             searchCount: parseInt(searchCount, 10) || 0,
             viewCount: parseInt(viewCount, 10) || 0,
             allUIDs: Array.isArray(allUIDs) ? allUIDs : [],
-            userPassword: userPassword || ''
+            userPassword: hashedPassword || (idx !== -1 ? users[idx].userPassword : '')
         };
 
         if (idx === -1) users.push(userRecord);
@@ -342,7 +424,7 @@ app.post('/users', (req, res) => {
 });
 
 // Register new user (assign unique UID, prevent email duplicates)
-app.post('/users/register', (req, res) => {
+app.post('/users/register', async (req, res) => {
     try {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
@@ -365,6 +447,9 @@ app.post('/users/register', (req, res) => {
         const maxUID = users.reduce((max, u) => Math.max(max, parseInt(u.userUID, 10) || 0), 0);
         const newUID = maxUID + 1;
 
+        // Hash the password before storing
+        const hashedPassword = await bcrypt.hash(userPassword, 10);
+
         const userRecord = {
             username,
             userUID: newUID,
@@ -373,7 +458,7 @@ app.post('/users/register', (req, res) => {
             searchCount: 0,
             viewCount: 0,
             allUIDs: users.map(u => parseInt(u.userUID, 10)).filter(n => !Number.isNaN(n)).concat(newUID),
-            userPassword
+            userPassword: hashedPassword
         };
 
         users.push(userRecord);
@@ -386,7 +471,7 @@ app.post('/users/register', (req, res) => {
 });
 
 // Authenticate user by email + password
-app.post('/users/auth', (req, res) => {
+app.post('/users/auth', async (req, res) => {
     try {
         const { userEmail, userPassword } = req.body || {};
         if (!userEmail || !userPassword) {
@@ -396,11 +481,17 @@ app.post('/users/auth', (req, res) => {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
         const user = users.find(u =>
-            String(u.userEmail).toLowerCase() === String(userEmail).toLowerCase() &&
-            String(u.userPassword) === String(userPassword)
+            String(u.userEmail).toLowerCase() === String(userEmail).toLowerCase()
         );
 
         if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+        
+        // Compare password with bcrypt
+        const passwordMatch = await bcrypt.compare(userPassword, user.userPassword);
+        if (!passwordMatch) {
+            return res.status(401).json({ error: 'Invalid credentials' });
+        }
+
         res.json(user);
     } catch (err) {
         console.error('Error authenticating user:', err);
