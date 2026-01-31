@@ -8,6 +8,8 @@ const bcrypt = require('bcrypt');
 
 const app = express();
 const YT_API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwH2fqak';
+const YOUTUBE_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
+const BCRYPT_SALT_ROUNDS = 10;
 
 // --- 1. MIDDLEWARE ---
 app.use(cors());
@@ -255,7 +257,6 @@ app.get('/youtube/search', async (req, res) => {
     
     try {
         const normalizedName = movieName.toLowerCase().trim();
-        const cacheExpiryMs = 24 * 60 * 60 * 1000; // 24 hours
         const now = Date.now();
         
         // Check cache first
@@ -271,7 +272,7 @@ app.get('/youtube/search', async (req, res) => {
         });
         
         // If cache exists and not expired, return it
-        if (cached && (now - cached.cached_at) < cacheExpiryMs) {
+        if (cached && (now - cached.cached_at) < YOUTUBE_CACHE_EXPIRY_MS) {
             console.log(`[YouTube] Cache hit: ${movieName} -> ${cached.video_id}`);
             return res.json({ videoId: cached.video_id, cached: true });
         }
@@ -408,7 +409,7 @@ app.post('/users', async (req, res) => {
             if (userPassword.startsWith('$2b$')) {
                 hashedPassword = userPassword;
             } else {
-                hashedPassword = await bcrypt.hash(userPassword, 10);
+                hashedPassword = await bcrypt.hash(userPassword, BCRYPT_SALT_ROUNDS);
             }
         }
         
@@ -459,7 +460,7 @@ app.post('/users/register', async (req, res) => {
         const newUID = maxUID + 1;
 
         // Hash the password before storing
-        const hashedPassword = await bcrypt.hash(userPassword, 10);
+        const hashedPassword = await bcrypt.hash(userPassword, BCRYPT_SALT_ROUNDS);
 
         const userRecord = {
             username,

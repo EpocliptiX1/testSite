@@ -4,7 +4,10 @@
    ========================================= */
 
 const PREFS_KEY = 'userPreferences';
-const API_BASE_URL = 'http://localhost:3000';
+const API_BASE_URL = window.location.origin.includes('localhost') 
+    ? 'http://localhost:3000' 
+    : window.location.origin;
+const MOVIE_DATA_LOAD_DELAY = 1000; // Wait for movie data to load from page
 
 // Get or initialize user preferences
 function getUserPreferences() {
@@ -280,7 +283,7 @@ if (window.location.pathname.includes('movieInfo.html')) {
             if (movieId) {
                 trackMovieClick(movieId, genre, year, rating);
             }
-        }, 1000);
+        }, MOVIE_DATA_LOAD_DELAY);
     });
 }
 

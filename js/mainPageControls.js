@@ -45,8 +45,17 @@ async function updateHero() {
 
         const iframe = document.getElementById('heroTrailerFrame');
         if (iframe && tId) {
-            // Set background trailer
-            iframe.src = `https://www.youtube.com/embed/${tId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${tId}`;
+            // Check Low Data Mode setting
+            const lowDataMode = localStorage.getItem('lowDataMode') === 'true';
+            
+            if (lowDataMode) {
+                // Show poster instead of autoplay
+                iframe.src = '';
+                console.log('[Low Data Mode] Skipping trailer autoplay');
+            } else {
+                // Set background trailer with autoplay
+                iframe.src = `https://www.youtube.com/embed/${tId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${tId}`;
+            }
         }
     }
 
