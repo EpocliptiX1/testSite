@@ -1018,7 +1018,62 @@ window.openSettings = function() {
         showLimitToast("⚠️ Sign in to access settings!");
         return;
     }
-    document.getElementById('settingsModal').classList.add('active');
+    const modal = document.getElementById('settingsModal');
+    if (modal) {
+        modal.classList.add('active');
+        // Load current settings
+        loadCurrentSettings();
+    }
+};
+
+// Load current settings into the modal
+function loadCurrentSettings() {
+    // Set theme selection
+    const currentTheme = localStorage.getItem('userTheme') || 'dark';
+    document.querySelectorAll('.theme-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.theme === currentTheme) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Set low data mode
+    const lowDataMode = localStorage.getItem('lowDataMode') === 'true';
+    const lowDataCheckbox = document.getElementById('lowDataMode');
+    if (lowDataCheckbox) lowDataCheckbox.checked = lowDataMode;
+    
+    // Set DeepL API key
+    const deeplKey = localStorage.getItem('deeplApiKey') || '';
+    const deeplInput = document.getElementById('deeplApiKey');
+    if (deeplInput) deeplInput.value = deeplKey;
+}
+
+window.selectThemeInSettings = function(themeName) {
+    // Update UI
+    document.querySelectorAll('.theme-option').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.theme === themeName) {
+            btn.classList.add('active');
+        }
+    });
+    
+    // Apply theme immediately
+    if (window.themeManager) {
+        window.themeManager.applyTheme(themeName);
+    }
+    
+    showLimitToast(`✨ ${themeName.charAt(0).toUpperCase() + themeName.slice(1)} theme applied!`);
+};
+
+window.toggleLowDataMode = function() {
+    const checkbox = document.getElementById('lowDataMode');
+    const enabled = checkbox.checked;
+    localStorage.setItem('lowDataMode', enabled);
+    
+    // Dispatch custom event for other components to listen to
+    window.dispatchEvent(new CustomEvent('lowDataModeChanged', { detail: { enabled } }));
+    
+    showLimitToast(enabled ? "📶 Low Data Mode enabled" : "📶 Low Data Mode disabled");
 };
 
 window.logout = function() {
@@ -1038,6 +1093,7 @@ window.saveSettings = function() {
     const newName = document.getElementById('settingsUsername').value;
     const passInput = document.getElementById('settingsPassword');
     const emailInput = document.getElementById('settingsEmail');
+    const deeplKeyInput = document.getElementById('deeplApiKey');
 
     if (newName.trim() !== "") {
         localStorage.setItem('username', newName);
@@ -1058,6 +1114,12 @@ window.saveSettings = function() {
 
     if (emailInput && emailInput.value.trim() !== "") {
         localStorage.setItem('userEmail', emailInput.value);
+    }
+    
+    // Save DeepL API Key
+    if (deeplKeyInput && deeplKeyInput.value.trim() !== "") {
+        localStorage.setItem('deeplApiKey', deeplKeyInput.value.trim());
+        showLimitToast("🔑 DeepL API key saved!");
     }
 
     closeSettings();

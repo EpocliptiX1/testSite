@@ -627,3 +627,152 @@ select:focus {
         color: black;
     }
 }
+
+/* Settings: Theme Selector */
+.theme-selector {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+}
+
+.theme-option {
+    flex: 1;
+    padding: 12px 20px;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.3s ease;
+    color: var(--text-primary);
+}
+
+.theme-option:hover {
+    background: var(--bg-hover);
+    border-color: var(--accent-secondary);
+}
+
+.theme-option.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+.theme-icon {
+    font-size: 1.5rem;
+}
+
+/* Settings: Toggle Switch */
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.toggle-switch input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+    background: var(--bg-tertiary);
+    border: 2px solid var(--border-color);
+    border-radius: 26px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 18px;
+    height: 18px;
+    left: 2px;
+    top: 2px;
+    background: var(--text-muted);
+    border-radius: 50%;
+    transition: all 0.3s ease;
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider::before {
+    transform: translateX(24px);
+    background: white;
+}
+
+.toggle-description {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    flex: 1 1 200px;
+}
+
+/* Improved light mode with filter inversion */
+body.theme-light {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+body.theme-light img,
+body.theme-light video,
+body.theme-light .movie-card img,
+body.theme-light .poster-img,
+body.theme-light [style*="background-image"] {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* Smooth transitions for all interactive elements */
+button, .btn, .apply-btn, .theme-option, .toggle-slider {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Hover effects with smooth scaling */
+.movie-card:hover {
+    transform: scale(1.05) translateY(-5px);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn:hover, .apply-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(255, 107, 0, 0.4);
+}
+
+/* Fade-in animation for content */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.setting-item {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Professional card shadows */
+.settings-content,
+.modal-header,
+.setting-item {
+    box-shadow: var(--shadow-md);
+}
+
+/* Improved input focus states */
+input:focus, textarea:focus, select:focus {
+    border-color: var(--accent-primary) !important;
+    box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+    transition: all 0.2s ease;
+}
