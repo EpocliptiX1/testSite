@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom Playlists - Legion Space</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo-container">
+            <img src="/img/LOGO.png" alt="Logo" class="logo-img">
+            <img src="/img/LOGO_Short.png" alt="Logo" class="logo-img logo-imgS">
+        </div>
+        <ul class="nav-links" id="navLinks">
+            <li><a href="/html/indexMain.html" class="myNavLink">Home</a></li>
+            <li><a href="/html/allMovies.html" class="myNavLink">Movies</a></li>
+            <li><a href="/html/customPlaylists.html" class="myNavLink noborder">Playlists</a></li>
+        </ul>
+    </nav>
+
+    <div class="container list-wrapper" style="padding: 80px 4% 50px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2 class="list-title">Community Playlists</h2>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <button id="createPlaylistBtn" class="apply-btn">Create</button>
+            </div>
+        </div>
+
+        <div id="playlistsGrid" class="netflix-grid">
+            <!-- Playlists will be injected here -->
+        </div>
+    </div>
+
+    <!-- Create Playlist Modal -->
+    <div id="createPlaylistModal" class="settings-modal-overlay create-playlist-modal">
+        <div class="settings-content" style="max-width:520px;">
+            <div class="modal-header">
+                <h2 class="modal-title">Create Playlist</h2>
+                <span class="close-settings" id="closeCreatePlaylistModal">&times;</span>
+            </div>
+            <form id="createPlaylistForm" class="create-playlist-form">
+                <div class="input-group" style="margin-bottom:12px;">
+                    <input type="text" id="newPlaylistName" required placeholder=" ">
+                    <label>Name</label>
+                </div>
+                <div class="desc-field">
+                    <label for="newPlaylistDesc">Desc</label>
+                    <textarea id="newPlaylistDesc" rows="3" placeholder="Why this playlist?"></textarea>
+                </div>
+                <button type="submit" class="apply-btn" style="width:100%;">Create</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Playlist Detail Modal -->
+    <div id="playlistModal" class="settings-modal-overlay">
+        <div class="settings-content">
+            <div class="modal-header">
+                <div>
+                    <h2 id="playlistTitle" class="modal-title">Playlist Name - Username</h2>
+                    <p id="playlistUID" style="font-size: 0.85rem; color: #666; margin: 4px 0 0 0;">UID: 12345</p>
+                    <p id="playlistDesc" class="playlist-desc-modal" style="display:none;"></p>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button id="addMoreToPlaylistBtn" class="btn-add-more">Add more</button>
+                    <span class="close-settings" id="closePlaylistModal">&times;</span>
+                </div>
+            </div>
+            <div id="playlistGenres" class="tech-specs-container" style="margin: 10px 0 6px;"></div>
+            <div id="playlistMovies" class="netflix-grid"></div>
+            <div class="playlist-comments">
+                <h3>Comments</h3>
+                <div id="playlistCommentsList" class="comments-list"></div>
+                <form id="playlistCommentForm" class="comment-form">
+                    <input id="playlistCommentInput" type="text" placeholder="Write a comment...">
+                    <button type="submit" class="apply-btn">Post</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Movies Modal -->
+    <div id="addMoviesModal" class="settings-modal-overlay">
+        <div class="settings-content">
+            <div class="modal-header">
+                <h2 class="modal-title">Add Movies to Playlist</h2>
+                <span class="close-settings" id="closeAddMoviesModal">&times;</span>
+            </div>
+            <div id="addMoviesGrid" class="netflix-grid"></div>
+            <div style="display:flex; justify-content:center; margin-top:16px;">
+                <button id="loadMoreMoviesBtn" class="apply-btn">Load more</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="container site-footer" style="margin-top:40px;">
+        <div class="footer-content">
+            <div class="footer-bottom">
+                <p>&copy; 2026 Legion Space Cinema. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/customPlaylist.js"></script>
+    <script src="/js/mainPageControls.js"></script>
+</body>
+</html>
