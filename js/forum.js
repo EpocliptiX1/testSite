@@ -165,41 +165,71 @@ function closeAddMovieModal() {
     document.getElementById('movieSearchResults').innerHTML = '';
 }
 
-// Search movies for forum
+// Search movies for forum with autocomplete dropdown
 let searchTimeout;
 async function searchMoviesForForum() {
     clearTimeout(searchTimeout);
     const query = document.getElementById('movieSearchInput').value.trim();
+    const container = document.getElementById('movieSearchResults');
     
     if (query.length < 2) {
-        document.getElementById('movieSearchResults').innerHTML = '';
+        container.innerHTML = '';
+        container.classList.remove('active');
         return;
     }
+
+    // Show loading state
+    container.classList.add('active');
+    container.innerHTML = `
+        <div class="search-loading" style="padding: 15px; text-align: center; color: var(--text-muted);">
+            Searching...
+        </div>
+    `;
 
     searchTimeout = setTimeout(async () => {
         try {
             const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
             const movies = await response.json();
             
-            const container = document.getElementById('movieSearchResults');
             if (movies.length === 0) {
-                container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No movies found</p>';
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--text-muted);">No movies found</div>';
                 return;
             }
 
-            container.innerHTML = movies.map(movie => `
-                <div class="movie-card" onclick="addMovieToForum(${movie.ID}, '${escapeHtml(movie['Movie Name'])}', '${movie.poster_full_url || ''}', '${escapeHtml(movie.Genre || '')}')">
-                    <img src="${movie.poster_full_url || '/img/placeholder.jpg'}" alt="${escapeHtml(movie['Movie Name'])}">
-                    <div class="movie-card-info">
-                        <h4>${escapeHtml(movie['Movie Name'])}</h4>
-                        <p>${movie.Rating || 'N/A'} ★</p>
+            // Display results as dropdown items (similar to navbar search)
+            container.innerHTML = movies.slice(0, 8).map(movie => `
+                <div class="search-item-forum" onclick="selectMovieForForum(${movie.ID}, '${escapeHtml(movie['Movie Name'])}', '${movie.poster_full_url || ''}', '${escapeHtml(movie.Genre || '')}')">
+                    <img src="${movie.poster_full_url || '/img/placeholder.jpg'}" 
+                         alt="${escapeHtml(movie['Movie Name'])}"
+                         onerror="this.src='/img/placeholder.jpg'"
+                         style="width: 50px; height: 75px; object-fit: cover; border-radius: 4px;">
+                    <div class="search-info-forum">
+                        <h5 style="margin: 0; font-size: 0.95rem; color: var(--text-primary);">${escapeHtml(movie['Movie Name'])}</h5>
+                        <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: var(--text-muted);">
+                            ${movie.Year || 'N/A'} • ${movie.Genre || 'Unknown'} • ⭐ ${movie.Rating || 'N/A'}
+                        </p>
                     </div>
                 </div>
             `).join('');
         } catch (error) {
             console.error('Error searching movies:', error);
+            container.innerHTML = '<div style="padding: 20px; text-align: center; color: var(--error-color);">Search failed. Please try again.</div>';
         }
     }, 300);
+}
+
+// Select movie from dropdown and add to forum
+async function selectMovieForForum(movieId, movieTitle, poster, genre) {
+    // Hide dropdown
+    const container = document.getElementById('movieSearchResults');
+    container.classList.remove('active');
+    container.innerHTML = '';
+    
+    // Clear search input
+    document.getElementById('movieSearchInput').value = '';
+    
+    // Add movie to forum
+    await addMovieToForum(movieId, movieTitle, poster, genre);
 }
 
 // Add movie to forum

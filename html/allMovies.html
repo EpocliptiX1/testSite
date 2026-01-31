@@ -36,33 +36,6 @@
         
             
             <div class="nav-tools">
-                <!-- Language Selector -->
-                <div class="language-selector">
-                    <button class="language-btn" onclick="toggleLanguageMenu()" aria-label="Select language">
-                        <span class="language-flag" id="currentFlag" role="img" aria-label="Current language flag">🇬🇧</span>
-                        <span id="currentLangCode">EN</span>
-                    </button>
-                    <div class="language-dropdown" id="languageDropdown" role="menu">
-                        <div class="language-option" onclick="selectLanguage('en')" role="menuitem">
-                            <span class="language-flag" role="img" aria-label="English">🇬🇧</span>
-                            <span>English</span>
-                        </div>
-                        <div class="language-option" onclick="selectLanguage('ru')" role="menuitem">
-                            <span class="language-flag" role="img" aria-label="Russian">🇷🇺</span>
-                            <span>Русский</span>
-                        </div>
-                        <div class="language-option" onclick="selectLanguage('kz')" role="menuitem">
-                            <span class="language-flag" role="img" aria-label="Kazakh">🇰🇿</span>
-                            <span>Қазақша</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Theme Toggle -->
-                <button class="theme-toggle" onclick="toggleSiteTheme()" aria-label="Toggle theme">
-                    <span class="theme-toggle-icon" id="themeIcon" role="img" aria-label="Theme icon">🌙</span>
-                    <span id="themeLabel">Dark</span>
-                </button>
                 
                 <div class="search-wrapper">
                     <div class="search-box">
@@ -298,25 +271,18 @@
                         
                         <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
                     </div>
+                    <div class="setting-item">
+                        <label>Language</label>
+                        <select id="settingsLanguage" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;" onchange="selectLanguage(this.value)">
+                            <option value="en">🇬🇧 English</option>
+                            <option value="ru">🇷🇺 Русский</option>
+                            <option value="kz">🇰🇿 Қазақша</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="settings-section">
                     <h3>Preferences</h3>
                     
-                    <!-- Theme Toggle -->
-                    <div class="setting-item">
-                        <label>Theme</label>
-                        <div class="theme-selector">
-                            <button class="theme-option" data-theme="dark" onclick="selectThemeInSettings('dark')">
-                                <span class="theme-icon">🌙</span>
-                                <span>Dark</span>
-                            </button>
-                            <button class="theme-option" data-theme="light" onclick="selectThemeInSettings('light')">
-                                <span class="theme-icon">☀️</span>
-                                <span>Light</span>
-                            </button>
-                        </div>
-                    </div>
-
                     <!-- Low Data Mode -->
                     <div class="setting-item">
                         <label>Low Data Mode</label>

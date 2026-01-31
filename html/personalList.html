@@ -77,32 +77,59 @@
     </nav>
 
     <div class="container list-wrapper" style="padding: 100px 4% 50px;">
-        <h2 class="list-title" style="margin-bottom: 30px; font-size: 2rem;">My List</h2>
-        
-        <div class="netflix-grid" id="myListGrid">
-            <div class="grid-card add-card" onclick="window.location.href='allMovies.html'">
-                <div class="add-content">
-                    <div class="plus-btn">
-                        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 60px; height: 60px;">
-                            <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6v-2z" fill="#f96d00"/> 
-                        </svg>
+        <!-- My List Section - Full Width at Top -->
+        <div class="mylist-section" style="margin-bottom: 50px;">
+            <h2 class="list-title" style="margin-bottom: 30px; font-size: 2.2rem; color: var(--accent-primary);">
+                📼 My List
+            </h2>
+            
+            <div class="netflix-grid" id="myListGrid" style="grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px;">
+                <div class="grid-card add-card" onclick="window.location.href='allMovies.html'" style="background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-card) 100%); border: 2px dashed var(--border-color); display: flex; align-items: center; justify-content: center; min-height: 300px; cursor: pointer; transition: all 0.3s ease;">
+                    <div class="add-content" style="text-align: center;">
+                        <div class="plus-btn">
+                            <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" style="width: 60px; height: 60px;">
+                                <path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6v-2z" fill="#f96d00"/> 
+                            </svg>
+                        </div>
+                        <p style="color: #888; margin-top: 15px; font-weight: bold;">Browse More</p>
                     </div>
-                    <p style="color: #888; margin-top: 15px; font-weight: bold;">Browse More</p>
                 </div>
             </div>
         </div>
 
-        <!-- Recommendations Section -->
-        <h2 class="list-title" style="margin: 50px 0 20px; font-size: 1.8rem;">
-            <span style="color: var(--accent-primary);">✨</span> Recommended for You
-        </h2>
-        <p style="color: var(--text-muted); margin-bottom: 20px;">Based on your viewing preferences and ratings</p>
-        <div class="netflix-grid" id="recommendationsGrid">
-            <!-- Recommendations will be loaded here -->
+        <!-- Recommendations Section - Full Width -->
+        <div class="recommendations-section" style="margin-bottom: 50px;">
+            <h2 class="list-title" style="margin-bottom: 20px; font-size: 1.8rem;">
+                <span style="color: var(--accent-primary);">✨</span> Recommended for You
+            </h2>
+            <p style="color: var(--text-muted); margin-bottom: 20px;">Based on your viewing preferences and ratings</p>
+            <div class="netflix-grid" id="recommendationsGrid" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px;">
+                <!-- Recommendations will be loaded here -->
+            </div>
         </div>
 
-        <h2 class="list-title" style="margin: 40px 0 20px; font-size: 1.6rem;">My Playlists</h2>
-        <div class="netflix-grid" id="myPlaylistsGrid"></div>
+        <!-- Two Column Layout: Playlists (50%) + Recent Posts (50%) -->
+        <div class="two-column-layout" style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 40px;">
+            <!-- Left Column: My Playlists -->
+            <div class="playlists-column" style="background: var(--bg-card); padding: 25px; border-radius: 12px; box-shadow: var(--shadow-md);">
+                <h2 class="list-title" style="margin: 0 0 20px 0; font-size: 1.6rem; color: var(--text-primary); border-bottom: 2px solid var(--accent-primary); padding-bottom: 10px;">
+                    📚 My Playlists
+                </h2>
+                <div id="myPlaylistsGrid" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Playlists will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Right Column: Recent Forum Posts -->
+            <div class="recent-posts-column" style="background: var(--bg-card); padding: 25px; border-radius: 12px; box-shadow: var(--shadow-md);">
+                <h2 class="list-title" style="margin: 0 0 20px 0; font-size: 1.6rem; color: var(--text-primary); border-bottom: 2px solid var(--accent-primary); padding-bottom: 10px;">
+                    💬 My Recent Posts
+                </h2>
+                <div id="recentPostsContainer" style="display: flex; flex-direction: column; gap: 12px;">
+                    <!-- Recent posts will be loaded here -->
+                </div>
+            </div>
+        </div>
     </div>
     <div id="signupModal" class="signup-overlay">
         <div class="signup-box">
@@ -241,6 +268,14 @@
                             <li>Localized database: Astana/Kazakhstan Region.</li>
                         </ul>
                         <p class="beta-small">Some settings are read-only during the hackathon phase.</p>
+                    </div>
+                    <div class="setting-item">
+                        <label>Language</label>
+                        <select id="settingsLanguage" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;" onchange="selectLanguage(this.value)">
+                            <option value="en">🇬🇧 English</option>
+                            <option value="ru">🇷🇺 Русский</option>
+                            <option value="kz">🇰🇿 Қазақша</option>
+                        </select>
                     </div>                    
                 </div>
                 <div class="settings-section">

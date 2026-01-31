@@ -3710,3 +3710,20 @@ body {
         padding: 8px;
     }
 }
+
+/* Personal List Page Responsive Styles */
+@media (max-width: 992px) {
+    .two-column-layout {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Hover effect for playlist and post items */
+.playlist-item:hover,
+.post-item:hover {
+    background: var(--bg-hover) !important;
+    border-color: var(--accent-secondary) !important;
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+}
