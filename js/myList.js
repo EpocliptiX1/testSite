@@ -130,24 +130,33 @@ async function loadRecentPosts(userUID) {
     const container = document.getElementById('recentPostsContainer');
     if (!container || userUID === 0) return;
 
+    const API_BASE = window.location.origin.includes('localhost') 
+        ? 'http://localhost:3000' 
+        : window.location.origin;
+
     try {
         // Fetch all forum threads and filter by user
-        const response = await fetch('http://localhost:3000/forum/movies');
+        const response = await fetch(`${API_BASE}/forum/movies`);
         const forumMovies = await response.json();
         
-        // Collect all threads from all movies
-        let userThreads = [];
-        for (const movie of forumMovies) {
-            const threadsRes = await fetch(`http://localhost:3000/forum/threads?movieId=${movie.movieId}`);
-            const threads = await threadsRes.json();
-            
-            // Filter threads by userUID and add movie info
-            const userMovieThreads = threads
-                .filter(t => parseInt(t.userUID) === userUID)
-                .map(t => ({ ...t, movieTitle: movie.movieTitle, movieId: movie.movieId }));
-            
-            userThreads = [...userThreads, ...userMovieThreads];
-        }
+        // Collect all threads from all movies using Promise.all for better performance
+        const threadPromises = forumMovies.map(async (movie) => {
+            try {
+                const threadsRes = await fetch(`${API_BASE}/forum/threads?movieId=${movie.movieId}`);
+                const threads = await threadsRes.json();
+                
+                // Filter threads by userUID and add movie info
+                return threads
+                    .filter(t => parseInt(t.userUID) === userUID)
+                    .map(t => ({ ...t, movieTitle: movie.movieTitle, movieId: movie.movieId }));
+            } catch (err) {
+                console.error(`Error fetching threads for movie ${movie.movieId}:`, err);
+                return [];
+            }
+        });
+
+        const threadArrays = await Promise.all(threadPromises);
+        const userThreads = threadArrays.flat();
 
         // Sort by creation date (newest first) and take top 5
         userThreads.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
