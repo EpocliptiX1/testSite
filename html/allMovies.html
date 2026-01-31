@@ -26,17 +26,45 @@
         </div>
 
         <ul class="nav-links" id="navLinks">
-            <li><a href="/html/indexMain.html" class="myNavLink">Home</a></li>
-            <li><a href="/html/allMovies.html" class="myNavLink">Movies</a></li>
-            <li><a href="personalList.html" class="myNavLink noborder">My List</a></li>
+            <li><a href="/html/indexMain.html" class="myNavLink" data-i18n="nav_home">Home</a></li>
+            <li><a href="/html/allMovies.html" class="myNavLink" data-i18n="nav_movies">Movies</a></li>
+            <li><a href="personalList.html" class="myNavLink noborder" data-i18n="nav_mylist">My List</a></li>
         </ul>       
 
         
             
             <div class="nav-tools">
+                <!-- Language Selector -->
+                <div class="language-selector">
+                    <button class="language-btn" onclick="toggleLanguageMenu()">
+                        <span class="language-flag" id="currentFlag">🇬🇧</span>
+                        <span id="currentLangCode">EN</span>
+                    </button>
+                    <div class="language-dropdown" id="languageDropdown">
+                        <div class="language-option" onclick="selectLanguage('en')">
+                            <span class="language-flag">🇬🇧</span>
+                            <span>English</span>
+                        </div>
+                        <div class="language-option" onclick="selectLanguage('ru')">
+                            <span class="language-flag">🇷🇺</span>
+                            <span>Русский</span>
+                        </div>
+                        <div class="language-option" onclick="selectLanguage('kz')">
+                            <span class="language-flag">🇰🇿</span>
+                            <span>Қазақша</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Theme Toggle -->
+                <button class="theme-toggle" onclick="toggleSiteTheme()">
+                    <span class="theme-toggle-icon" id="themeIcon">🌙</span>
+                    <span id="themeLabel">Dark</span>
+                </button>
+                
                 <div class="search-wrapper">
                     <div class="search-box">
-                        <input type="text" id="mainSearch" placeholder="Titles, people, genres..." autocomplete="off">
+                        <input type="text" id="mainSearch" placeholder="Titles, people, genres..." data-i18n-placeholder="nav_search_placeholder" autocomplete="off">
                     </div>
                     <div class="search-results-menu" id="searchResults"></div>
         </div>
@@ -44,27 +72,27 @@
         <div class="account-trigger" onclick="toggleAccountMenu()">
         <div class="grey-profile-pic"></div>
             
-            <span id="navUsername">Guest</span>
+            <span id="navUsername" data-i18n="nav_guest">Guest</span>
             
             <div class="account-dropdown" id="accountDropdown">
                 <div class="dropdown-header">
-                    <p id="dropTier" class="tier-badge">Free Tier</p>
+                    <p id="dropTier" class="tier-badge" data-i18n="nav_free_tier">Free Tier</p>
                 </div>
                 <div class="dropdown-stats">
                     <div class="stat-line">
-                        <span>Searches:</span>
+                        <span data-i18n="nav_searches">Searches:</span>
                         <span id="statSearch">0/5</span>
                     </div>
                     <div class="stat-line">
-                        <span>Views:</span>
+                        <span data-i18n="nav_views">Views:</span>
                         <span id="statView">0/3</span>
                     </div>
                 </div>
                 <hr>
-                <a href="#" id="signInLink" class="drop-link" onclick="openSignInModal()">Sign In</a>
-                <a href="#" id="signUpLink" class="drop-link" onclick="openSignupModal()">Create Account</a>
-                <a href="#" class="drop-link" onclick="openSettings()">Settings</a>
-                <a href="#" class="drop-link" onclick="logout()">Logout</a>
+                <a href="#" id="signInLink" class="drop-link" onclick="openSignInModal()" data-i18n="nav_signin">Sign In</a>
+                <a href="#" id="signUpLink" class="drop-link" onclick="openSignupModal()" data-i18n="nav_signup">Create Account</a>
+                <a href="#" class="drop-link" onclick="openSettings()" data-i18n="nav_settings">Settings</a>
+                <a href="#" class="drop-link" onclick="logout()" data-i18n="nav_logout">Logout</a>
         </div>
     </div>
         </div>
