@@ -11,6 +11,7 @@
     <script src="/js/i18n.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
+    <script src="/js/recommendations.js"></script>
   
     
 </head>
@@ -31,7 +32,9 @@
         <ul class="nav-links" id="navLinks">
             <li><a href="/html/indexMain.html" class="myNavLink">Home</a></li>
             <li><a href="/html/allMovies.html" class="myNavLink">Movies</a></li>
-            <li><a href="personalList.html" class="myNavLink noborder">My List</a></li>
+            <li><a href="personalList.html" class="myNavLink">My List</a></li>
+            <li><a href="/html/customPlaylists.html" class="myNavLink">Playlists</a></li>
+            <li><a href="/html/forum.html" class="myNavLink noborder">Forum</a></li>
         </ul>       
 
         
@@ -87,6 +90,15 @@
                     <p style="color: #888; margin-top: 15px; font-weight: bold;">Browse More</p>
                 </div>
             </div>
+        </div>
+
+        <!-- Recommendations Section -->
+        <h2 class="list-title" style="margin: 50px 0 20px; font-size: 1.8rem;">
+            <span style="color: var(--accent-primary);">✨</span> Recommended for You
+        </h2>
+        <p style="color: var(--text-muted); margin-bottom: 20px;">Based on your viewing preferences and ratings</p>
+        <div class="netflix-grid" id="recommendationsGrid">
+            <!-- Recommendations will be loaded here -->
         </div>
 
         <h2 class="list-title" style="margin: 40px 0 20px; font-size: 1.6rem;">My Playlists</h2>
