@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const fetch = require('node-fetch');
 const bcrypt = require('bcrypt');
+const rateLimit = require('express-rate-limit');
 
 const app = express();
 const YT_API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwH2fqak';
@@ -14,6 +15,22 @@ const BCRYPT_SALT_ROUNDS = 10;
 // --- 1. MIDDLEWARE ---
 app.use(cors());
 app.use(express.json()); // Essential for POST requests (Reviews & My List)
+
+// Rate limiting configurations
+const generalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again later.'
+});
+
+const strictLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 20, // Limit each IP to 20 requests per windowMs for sensitive operations
+    message: 'Too many requests from this IP, please try again later.'
+});
+
+// Apply rate limiting to all routes
+app.use(generalLimiter);
 
 // Serve static files from the root directory
 app.use(express.static(path.join(__dirname, '..')));
@@ -436,7 +453,7 @@ app.post('/users', async (req, res) => {
 });
 
 // Register new user (assign unique UID, prevent email duplicates)
-app.post('/users/register', async (req, res) => {
+app.post('/users/register', strictLimiter, async (req, res) => {
     try {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
@@ -483,7 +500,7 @@ app.post('/users/register', async (req, res) => {
 });
 
 // Authenticate user by email + password
-app.post('/users/auth', async (req, res) => {
+app.post('/users/auth', strictLimiter, async (req, res) => {
     try {
         const { userEmail, userPassword } = req.body || {};
         if (!userEmail || !userPassword) {
