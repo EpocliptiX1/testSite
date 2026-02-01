@@ -25,15 +25,24 @@
         </ul>
     </nav>
 
-    <div class="container list-wrapper" style="padding: 80px 4% 50px;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-            <h2 class="list-title">Community Playlists</h2>
-            <div style="display:flex; gap:10px; align-items:center;">
-                <button id="createPlaylistBtn" class="apply-btn">Create</button>
+    <div class="container list-wrapper" style="padding: 100px 4% 50px;">
+        <!-- Header Section with Enhanced Styling -->
+        <div class="playlists-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; padding: 25px; background: linear-gradient(135deg, var(--bg-card) 0%, var(--bg-tertiary) 100%); border-radius: 12px; box-shadow: var(--shadow-lg); border: 1px solid var(--border-color);">
+            <div>
+                <h2 class="list-title" style="margin: 0 0 8px 0; font-size: 2.2rem; color: var(--accent-primary); display: flex; align-items: center; gap: 12px;">
+                    📚 Community Playlists
+                </h2>
+                <p style="margin: 0; color: var(--text-muted); font-size: 1rem;">Discover and create curated movie collections</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button id="createPlaylistBtn" class="apply-btn" style="padding: 12px 24px; font-size: 1rem; display: flex; align-items: center; gap: 8px; background: var(--accent-primary); border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+                    <span style="font-size: 1.2rem;">+</span> Create Playlist
+                </button>
             </div>
         </div>
 
-        <div id="playlistsGrid" class="netflix-grid">
+        <!-- Enhanced Playlists Grid -->
+        <div id="playlistsGrid" class="netflix-grid" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 24px; padding: 10px 0;">
             <!-- Playlists will be injected here -->
         </div>
     </div>

@@ -98,35 +98,127 @@ document.addEventListener('DOMContentLoaded', async () => {
         const owned = (playlists || []).filter(p => parseInt(p.ownerUID, 10) === userUID);
 
         if (!owned || owned.length === 0) {
-            playlistsGrid.innerHTML = '<p style="color:#666; padding:10px;">No playlists yet.</p>';
+            playlistsGrid.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No playlists yet. Create one to get started!</p>';
+        } else {
+            const html = owned.map(p => {
+                const poster = (p.movies && p.movies[0] && p.movies[0].poster) ? p.movies[0].poster : '/img/placeholder.jpg';
+                const count = (p.movies || []).length;
+                return `
+                    <div class="playlist-item" onclick="window.location.href='customPlaylists.html'" style="display: flex; gap: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; border: 1px solid var(--border-color);">
+                        <img src="${poster}" onerror="this.src='/img/placeholder.jpg'" style="width: 60px; height: 90px; border-radius: 6px; object-fit: cover;">
+                        <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
+                            <h4 style="margin: 0 0 5px 0; font-size: 1rem; color: var(--text-primary);">${p.name}</h4>
+                            <span style="font-size: 0.85rem; color: var(--text-muted);">${count} movies</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            playlistsGrid.innerHTML = html;
+        }
+    } catch (err) {
+        console.error('Playlist load error:', err);
+        playlistsGrid.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Could not load playlists.</p>';
+    }
+
+    // --- Load Recent Forum Posts ---
+    await loadRecentPosts(userUID);
+});
+
+// Load recent forum posts for the user
+async function loadRecentPosts(userUID) {
+    const container = document.getElementById('recentPostsContainer');
+    if (!container || userUID === 0) return;
+
+    const API_BASE = window.location.origin.includes('localhost') 
+        ? 'http://localhost:3000' 
+        : window.location.origin;
+
+    try {
+        // Fetch all forum threads and filter by user
+        const response = await fetch(`${API_BASE}/forum/movies`);
+        const forumMovies = await response.json();
+        
+        // Collect all threads from all movies using Promise.all for better performance
+        const threadPromises = forumMovies.map(async (movie) => {
+            try {
+                const threadsRes = await fetch(`${API_BASE}/forum/threads?movieId=${movie.movieId}`);
+                const threads = await threadsRes.json();
+                
+                // Filter threads by userUID and add movie info
+                return threads
+                    .filter(t => parseInt(t.userUID) === userUID)
+                    .map(t => ({ ...t, movieTitle: movie.movieTitle, movieId: movie.movieId }));
+            } catch (err) {
+                console.error(`Error fetching threads for movie ${movie.movieId}:`, err);
+                return [];
+            }
+        });
+
+        const threadArrays = await Promise.all(threadPromises);
+        const userThreads = threadArrays.flat();
+
+        // Sort by creation date (newest first) and take top 5
+        userThreads.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        const recentThreads = userThreads.slice(0, 5);
+
+        if (recentThreads.length === 0) {
+            container.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No forum posts yet. Share your thoughts on the forum!</p>';
             return;
         }
 
-        const html = owned.map(p => {
-            const poster = (p.movies && p.movies[0] && p.movies[0].poster) ? p.movies[0].poster : '/img/placeholder.jpg';
-            const count = (p.movies || []).length;
+        container.innerHTML = recentThreads.map(thread => {
+            const timeAgo = formatTimeAgo(thread.createdAt);
             return `
-                <div class="grid-card" onclick="window.location.href='customPlaylists.html'">
-                    <img src="${poster}" onerror="this.src='/img/placeholder.jpg'">
-                    <div class="card-hover-info">
-                        <div class="hover-btns">
-                            <button class="hover-play" onclick="event.stopPropagation(); window.location.href='customPlaylists.html'">▶</button>
-                        </div>
-                        <div class="info-text">
-                            <h4>${p.name}</h4>
-                            <span class="match-score">${count} movies</span>
+                <div class="post-item" onclick="window.location.href='/html/forum.html'" style="padding: 12px; background: var(--bg-tertiary); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; border: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: start; gap: 10px; margin-bottom: 8px;">
+                        <span style="font-size: 1.2rem;">💬</span>
+                        <div style="flex: 1;">
+                            <h4 style="margin: 0 0 4px 0; font-size: 0.95rem; color: var(--text-primary); font-weight: 600;">${escapeHtml(thread.title)}</h4>
+                            <p style="margin: 0 0 6px 0; font-size: 0.85rem; color: var(--text-secondary); overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;">
+                                ${escapeHtml(thread.description || '').substring(0, 100)}${thread.description && thread.description.length > 100 ? '...' : ''}
+                            </p>
+                            <div style="display: flex; gap: 12px; font-size: 0.8rem; color: var(--text-muted);">
+                                <span>🎬 ${escapeHtml(thread.movieTitle)}</span>
+                                <span>📅 ${timeAgo}</span>
+                                <span>💬 ${thread.commentCount || 0} comments</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
         }).join('');
 
-        playlistsGrid.innerHTML = html;
     } catch (err) {
-        console.error('Playlist load error:', err);
-        playlistsGrid.innerHTML = '<p style="color:#666; padding:10px;">Could not load playlists.</p>';
+        console.error('Error loading recent posts:', err);
+        container.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">Could not load recent posts.</p>';
     }
-});
+}
+
+// Format time ago
+function formatTimeAgo(dateString) {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = now - date;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    return date.toLocaleDateString();
+}
+
+// HTML escape function
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
 
 // ---   GLOBAL REMOVE FUNCTION ---
 window.removeFromList = function(id) {

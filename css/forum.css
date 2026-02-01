@@ -499,3 +499,58 @@
 .empty-state p {
     color: var(--text-muted);
 }
+
+/* Forum Search Dropdown Styles */
+.search-wrapper-forum {
+    position: relative;
+}
+
+.search-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-top: 8px;
+    max-height: 400px;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lg);
+    z-index: 1000;
+    display: none;
+}
+
+.search-results-dropdown.active {
+    display: block;
+}
+
+.search-item-forum {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 15px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-item-forum:last-child {
+    border-bottom: none;
+}
+
+.search-item-forum:hover {
+    background: var(--bg-hover);
+}
+
+.search-info-forum {
+    flex: 1;
+    min-width: 0;
+}
+
+.search-loading {
+    padding: 15px;
+    text-align: center;
+    color: var(--text-muted);
+}
+
