@@ -1,1 +1,20 @@
-[]
+[
+  {
+    "movieId": "1",
+    "movieTitle": "The Shawshank Redemption",
+    "poster": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+    "genre": "Drama",
+    "addedBy": "user1",
+    "addedByUID": 1,
+    "createdAt": "2026-02-01T06:59:37.044Z"
+  },
+  {
+    "movieId": "5122",
+    "movieTitle": "Regarding Henry",
+    "poster": "https://image.tmdb.org/t/p/w500/1gyViKAIpy1jAcM3B17iXNbiHrh.jpg",
+    "genre": "Drama, Romance",
+    "addedBy": "user1",
+    "addedByUID": 1,
+    "createdAt": "2026-02-01T06:59:33.640Z"
+  }
+]

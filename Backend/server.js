@@ -6,11 +6,13 @@ const path = require('path');
 const fetch = require('node-fetch');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
+const axios = require('axios');
 
 const app = express();
 const YT_API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwH2fqak';
 const YOUTUBE_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 const BCRYPT_SALT_ROUNDS = 10;
+const DEEPL_API_KEY = 'c7911c56-d32c-429a-8d7a-a7f0eeefe76b:fx';
 
 // --- 1. MIDDLEWARE ---
 app.use(cors());
@@ -19,14 +21,14 @@ app.use(express.json()); // Essential for POST requests (Reviews & My List)
 // Rate limiting configurations
 const generalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
-    message: 'Too many requests from this IP, please try again later.'
+    max: 1000, // Limit each IP to 1000 requests per windowMs
+    message: { error: 'Too many requests from this IP, please try again later.' }
 });
 
 const strictLimiter = rateLimit({
     windowMs: 15 * 60 * 1000, // 15 minutes
     max: 20, // Limit each IP to 20 requests per windowMs for sensitive operations
-    message: 'Too many requests from this IP, please try again later.'
+    message: { error: 'Too many requests from this IP, please try again later.' }
 });
 
 // Apply rate limiting to all routes
@@ -40,6 +42,43 @@ app.use((req, res, next) => {
     console.log('REQ:', req.method, req.path, req.query);
     next();
 });
+
+// --- 1.5 TRANSLATION PROXY ---
+app.post('/translate', async (req, res) => {
+    try {
+        const { text, target_lang, source_lang } = req.body || {};
+        const texts = Array.isArray(text) ? text : [text];
+        const filtered = texts.filter(t => typeof t === 'string' && t.trim().length > 0);
+
+        if (filtered.length === 0 || !target_lang) {
+            return res.status(400).json({ error: 'text and target_lang required' });
+        }
+
+        const params = new URLSearchParams();
+        filtered.forEach(t => params.append('text', t));
+        params.append('target_lang', String(target_lang).toUpperCase());
+        if (source_lang && String(source_lang).toUpperCase() !== 'AUTO') {
+            params.append('source_lang', String(source_lang).toUpperCase());
+        }
+
+        const response = await axios.post(
+            'https://api-free.deepl.com/v2/translate',
+            params,
+            {
+                headers: {
+                    'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            }
+        );
+
+        res.json(response.data);
+    } catch (error) {
+        console.error('DeepL Proxy Error:', error.response?.data || error.message);
+        res.status(500).json({ error: 'Translation failed' });
+    }
+});
+
 
 // --- 2. DATABASE SETUP ---
 // Connect to the SQLite database
@@ -435,6 +474,7 @@ app.post('/users', async (req, res) => {
             userUID: uidNum,
             userEmail: userEmail || '',
             userTier: userTier || 'Free',
+            userLanguage: userLanguage || (idx !== -1 ? users[idx].userLanguage : 'en'),
             searchCount: parseInt(searchCount, 10) || 0,
             viewCount: parseInt(viewCount, 10) || 0,
             allUIDs: Array.isArray(allUIDs) ? allUIDs : [],
@@ -461,7 +501,8 @@ app.post('/users/register', strictLimiter, async (req, res) => {
             username,
             userEmail,
             userTier,
-            userPassword
+            userPassword,
+            userLanguage
         } = req.body || {};
 
         if (!username || !userEmail || !userPassword) {
@@ -484,6 +525,7 @@ app.post('/users/register', strictLimiter, async (req, res) => {
             userUID: newUID,
             userEmail,
             userTier: userTier || 'Free',
+            userLanguage: userLanguage || 'en',
             searchCount: 0,
             viewCount: 0,
             allUIDs: users.map(u => parseInt(u.userUID, 10)).filter(n => !Number.isNaN(n)).concat(newUID),
@@ -1088,6 +1130,32 @@ app.post('/forum/threads/:id/comments/:commentId/upvote', (req, res) => {
     } catch (err) {
         console.error('Error upvoting comment:', err);
         res.status(500).json({ error: 'Could not upvote' });
+    }
+});
+
+// Delete thread (owner only)
+app.delete('/forum/threads/:id', (req, res) => {
+    try {
+        const data = fs.readFileSync(forumThreadsPath, 'utf8');
+        const threads = JSON.parse(data) || [];
+        const idx = threads.findIndex(t => String(t.id) === String(req.params.id));
+        if (idx === -1) return res.status(404).json({ error: 'Thread not found' });
+
+        const { userUID } = req.body || {};
+        const uid = parseInt(userUID, 10);
+        if (!uid || uid === 0) return res.status(403).json({ error: 'Sign in to delete thread' });
+
+        const thread = threads[idx];
+        if (parseInt(thread.userUID, 10) !== uid) {
+            return res.status(403).json({ error: 'You do not own this thread' });
+        }
+
+        threads.splice(idx, 1);
+        fs.writeFileSync(forumThreadsPath, JSON.stringify(threads, null, 2));
+        res.json({ message: 'Thread deleted' });
+    } catch (err) {
+        console.error('Error deleting thread:', err);
+        res.status(500).json({ error: 'Could not delete thread' });
     }
 });
 

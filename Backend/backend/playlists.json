@@ -1,28 +1,9 @@
 [
   {
-    "id": "1769881634980",
-    "name": "w",
-    "desc": "ew",
-    "owner": "Damir",
-    "ownerUID": 1,
-    "score": 0,
-    "voters": {},
-    "comments": [],
-    "movies": [
-      {
-        "movieId": "3",
-        "movieTitle": "Ramayana: The Legend of Prince Rama",
-        "poster": "https://image.tmdb.org/t/p/w500/l4MNBj7Zn2iVNfwBdm80Am0Ll7w.jpg",
-        "genre": "Animation, Action, Adventure"
-      }
-    ],
-    "createdAt": "2026-01-31T17:47:14.980Z"
-  },
-  {
-    "id": "1769872907389",
-    "name": "ex name",
-    "desc": "desc",
-    "owner": "Damir",
+    "id": "1769930049293",
+    "name": "er",
+    "desc": "we",
+    "owner": "user1",
     "ownerUID": 1,
     "score": 1,
     "voters": {
@@ -30,11 +11,11 @@
     },
     "comments": [
       {
-        "id": "1769881029955",
+        "id": "1769930076197",
         "userUID": 1,
-        "username": "Damir",
-        "text": "dwdwdwdwddwdwdwdwddwdwdwdwddwdwdwdwddwdwdwdwddwdwdwdwddwdwdwdwd",
-        "createdAt": "2026-01-31T17:37:09.956Z",
+        "username": "user1",
+        "text": "d",
+        "createdAt": "2026-02-01T07:14:36.197Z",
         "upvotes": 1,
         "voters": {
           "1": true
@@ -43,34 +24,18 @@
     ],
     "movies": [
       {
-        "movieId": "1",
-        "movieTitle": "The Shawshank Redemption",
-        "poster": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg"
-      },
-      {
         "movieId": "2",
         "movieTitle": "The Godfather",
-        "poster": "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg"
+        "poster": "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg",
+        "genre": "Crime, Drama"
       },
       {
-        "movieId": "1787",
-        "movieTitle": "Weathering with You",
-        "poster": "https://image.tmdb.org/t/p/w500/qgrk7r1fV4IjuoeiGS5HOhXNdLJ.jpg",
-        "genre": "Animation, Drama, Fantasy"
-      },
-      {
-        "movieId": "5553",
-        "movieTitle": "One Piece Film: Red",
-        "poster": "https://image.tmdb.org/t/p/w500/m80kPdrmmtEh9wlLroCp0bwUGH0.jpg",
-        "genre": "Animation, Action, Adventure"
-      },
-      {
-        "movieId": "9221",
-        "movieTitle": "The Addams Family 2",
-        "poster": "https://image.tmdb.org/t/p/w500/ld7YB9vBRp1GM1DT3KmFWSmtBPB.jpg",
-        "genre": "Animation, Adventure, Comedy"
+        "movieId": "1",
+        "movieTitle": "The Shawshank Redemption",
+        "poster": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+        "genre": "Drama"
       }
     ],
-    "createdAt": "2026-01-31T15:21:47.389Z"
+    "createdAt": "2026-02-01T07:14:09.293Z"
   }
 ]

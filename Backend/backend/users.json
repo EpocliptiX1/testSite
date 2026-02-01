@@ -1,27 +1,15 @@
 [
   {
-    "username": "Damir",
+    "username": "user1",
     "userUID": 1,
     "userEmail": "dshabayev.19@gmail.com",
     "userTier": "Free",
+    "userLanguage": "en",
     "searchCount": 0,
     "viewCount": 0,
     "allUIDs": [
       1
     ],
-    "userPassword": "123"
-  },
-  {
-    "username": "dwweewwe",
-    "userUID": 2,
-    "userEmail": "dshabayev.1903@gmail.comdwdw",
-    "userTier": "Free",
-    "searchCount": 0,
-    "viewCount": 0,
-    "allUIDs": [
-      1,
-      2
-    ],
-    "userPassword": "dwdw"
+    "userPassword": "$2b$10$d132Vfev6i4IhsbgW4U..ubLQd/pWpIFsxmHyBPTZ1VI2cM8BZHaW"
   }
 ]
