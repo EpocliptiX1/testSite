@@ -11,7 +11,7 @@
 | 778 | `./css/theme-enhancements.css` |
 | 556 | `./css/forum.css` |
 
-### JavaScript Files (Total Lines: 5,507)
+### JavaScript Files (Total Lines: 6,248)
 | Lines | File Path |
 |------:|-----------|
 | 1,640 | `./js/mainPageControls.js` |
@@ -29,7 +29,7 @@
 | 152 | `./js/allMovies.js` |
 | 151 | `./js/theme.js` |
 
-### HTML Files (Total Lines: 2,036)
+### HTML Files (Total Lines: 2,135)
 | Lines | File Path |
 |------:|-----------|
 | 501 | `./html/indexMain.html` |
@@ -64,12 +64,13 @@
 
 | Category | Lines | Percentage |
 |----------|------:|-----------:|
+| JavaScript Files | 6,248 | 42.2% |
 | CSS Files | 5,143 | 34.7% |
-| JavaScript Files | 5,507 | 37.2% |
-| HTML Files | 2,036 | 13.8% |
+| HTML Files | 2,135 | 14.4% |
 | Backend (Node.js) | 1,168 | 7.9% |
 | Python Scripts | 120 | 0.8% |
-| Other | 840 | 5.6% |
+
+> **Note:** The percentages are calculated based on the total lines of code (14,814). All code files including JavaScript, CSS, HTML, Backend, and Python scripts are included in this count.
 
 ### Top 5 Largest Files
 
