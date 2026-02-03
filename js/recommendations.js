@@ -28,11 +28,11 @@ function getUserPreferences() {
         const parsedPrefs = JSON.parse(prefs);
         // Ensure all required properties exist, merge with defaults
         return {
-            genreClicks: parsedPrefs.genreClicks || {},
-            yearRangeClicks: parsedPrefs.yearRangeClicks || {},
+            genreClicks: parsedPrefs.genreClicks ?? {},
+            yearRangeClicks: parsedPrefs.yearRangeClicks ?? {},
             ratingPreference: parsedPrefs.ratingPreference ?? 0,
-            watchedMovies: parsedPrefs.watchedMovies || [],
-            clickedMovies: parsedPrefs.clickedMovies || []
+            watchedMovies: parsedPrefs.watchedMovies ?? [],
+            clickedMovies: parsedPrefs.clickedMovies ?? []
         };
     } catch (error) {
         console.warn('Failed to parse stored preferences. Clearing corrupted data and using defaults.', error);
