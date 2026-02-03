@@ -30,7 +30,7 @@ function getUserPreferences() {
         return {
             genreClicks: parsedPrefs.genreClicks || {},
             yearRangeClicks: parsedPrefs.yearRangeClicks || {},
-            ratingPreference: parsedPrefs.ratingPreference || 0,
+            ratingPreference: parsedPrefs.ratingPreference ?? 0,
             watchedMovies: parsedPrefs.watchedMovies || [],
             clickedMovies: parsedPrefs.clickedMovies || []
         };
