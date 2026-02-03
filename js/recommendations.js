@@ -9,19 +9,22 @@ const API_BASE_URL = window.location.origin.includes('localhost')
     : window.location.origin;
 const MOVIE_DATA_LOAD_DELAY = 1000; // Wait for movie data to load from page
 
-// Get or initialize user preferences
-function getUserPreferences() {
-    const defaultPrefs = {
+// Default preferences structure
+function getDefaultPreferences() {
+    return {
         genreClicks: {},      // { "Action": 5, "Drama": 3 }
         yearRangeClicks: {},  // { "2020s": 10, "2010s": 5 }
         ratingPreference: 0,  // Average rating of watched movies
         watchedMovies: [],    // List of movie IDs
         clickedMovies: []     // List of recently clicked movies
     };
-    
+}
+
+// Get or initialize user preferences
+function getUserPreferences() {
     const prefs = localStorage.getItem(PREFS_KEY);
     if (!prefs) {
-        return defaultPrefs;
+        return getDefaultPreferences();
     }
     
     try {
@@ -37,7 +40,7 @@ function getUserPreferences() {
     } catch (error) {
         console.warn('Failed to parse stored preferences. Clearing corrupted data and using defaults.', error);
         localStorage.removeItem(PREFS_KEY);
-        return defaultPrefs;
+        return getDefaultPreferences();
     }
 }
 
