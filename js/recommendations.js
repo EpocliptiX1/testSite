@@ -35,7 +35,8 @@ function getUserPreferences() {
             clickedMovies: parsedPrefs.clickedMovies || []
         };
     } catch (error) {
-        console.error('Error parsing user preferences, resetting to defaults:', error);
+        console.error('Failed to parse stored preferences. Clearing corrupted data and using defaults.', error);
+        localStorage.removeItem(PREFS_KEY);
         return defaultPrefs;
     }
 }
