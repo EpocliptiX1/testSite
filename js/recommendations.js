@@ -11,17 +11,33 @@ const MOVIE_DATA_LOAD_DELAY = 1000; // Wait for movie data to load from page
 
 // Get or initialize user preferences
 function getUserPreferences() {
+    const defaultPrefs = {
+        genreClicks: {},      // { "Action": 5, "Drama": 3 }
+        yearRangeClicks: {},  // { "2020s": 10, "2010s": 5 }
+        ratingPreference: 0,  // Average rating of watched movies
+        watchedMovies: [],    // List of movie IDs
+        clickedMovies: []     // List of recently clicked movies
+    };
+    
     const prefs = localStorage.getItem(PREFS_KEY);
     if (!prefs) {
-        return {
-            genreClicks: {},      // { "Action": 5, "Drama": 3 }
-            yearRangeClicks: {},  // { "2020s": 10, "2010s": 5 }
-            ratingPreference: 0,  // Average rating of watched movies
-            watchedMovies: [],    // List of movie IDs
-            clickedMovies: []     // List of recently clicked movies
-        };
+        return defaultPrefs;
     }
-    return JSON.parse(prefs);
+    
+    try {
+        const parsedPrefs = JSON.parse(prefs);
+        // Ensure all required properties exist, merge with defaults
+        return {
+            genreClicks: parsedPrefs.genreClicks || {},
+            yearRangeClicks: parsedPrefs.yearRangeClicks || {},
+            ratingPreference: parsedPrefs.ratingPreference || 0,
+            watchedMovies: parsedPrefs.watchedMovies || [],
+            clickedMovies: parsedPrefs.clickedMovies || []
+        };
+    } catch (error) {
+        console.error('Error parsing user preferences, resetting to defaults:', error);
+        return defaultPrefs;
+    }
 }
 
 // Save user preferences
