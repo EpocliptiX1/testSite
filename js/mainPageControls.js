@@ -6,8 +6,17 @@ let currentSlide = 0;
 
 async function initHero() {
     try {
-        const response = await fetch('http://localhost:3000/movies/library?limit=5&sort=date_desc');
-        const movies = await response.json();
+        const isBrowsePage = window.location.pathname.includes('indexBrowse.html');
+        let movies = [];
+
+        if (isBrowsePage && window.recommendationsSystem?.generateRecommendations) {
+            movies = await window.recommendationsSystem.generateRecommendations(5);
+        }
+
+        if (!movies || movies.length === 0) {
+            const response = await fetch('http://localhost:3000/movies/library?limit=5&sort=date_desc');
+            movies = await response.json();
+        }
 
         heroMovies = movies.map(movie => ({
             id: movie.ID,
@@ -20,6 +29,11 @@ async function initHero() {
             stars: movie.Stars || "",
             searchName: movie['Movie Name']
         }));
+
+        const heroTag = document.getElementById('heroTag');
+        if (heroTag && isBrowsePage) {
+            heroTag.textContent = 'Recommended for you';
+        }
 
         if (heroMovies.length > 0) {
             updateHero();
@@ -237,6 +251,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchBox.appendChild(resultsMenu);
         }
 
+        if (resultsMenu.parentElement !== document.body) {
+            document.body.appendChild(resultsMenu);
+        }
+        resultsMenu.classList.add('search-results-modal');
+
         // Expansion
         searchInput.addEventListener('focus', () => searchBox.classList.add('expanded'));
         searchInput.addEventListener('blur', () => {
@@ -325,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             <img src="${movie.poster_full_url}" 
                                     alt="${movie['Movie Name']}" 
                                     style="width:100%; height:100%; object-fit:cover;"
-                                    onerror="this.src='/img/placeholder.jpg'">
+                                    onerror="this.src='/img/LOGO_Short.png'">
                             
                             <div class="card-overlay">
                                 <svg class="play-icon-svg" viewBox="0 0 24 24">
@@ -358,7 +377,7 @@ function renderSearchResults(movies, container) {
 
     container.innerHTML = movies.map(movie => `
         <div class="search-item" onclick="window.location.href='movieInfo.html?id=${movie.ID}'">
-            <img src="${movie.poster_full_url}" alt="poster" onerror="this.src='../img/placeholder.jpg'">
+            <img src="${movie.poster_full_url}" alt="poster" onerror="this.src='/img/LOGO_Short.png'">
             <div class="search-info">
                 <h5>${movie['Movie Name']}</h5>
                 <p>${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'} • ⭐ ${movie.imdb_rating || 'N/A'} IMDb</p>
@@ -487,25 +506,109 @@ function proceedToIMDb() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-    fetchRow('rowTrending', 'rating_desc');
-    fetchRow('rowGrossing', 'success_desc');
-    fetchRow('rowNewest', 'date_desc');
-    fetchRow('rowLongest', 'duration_desc');
-    
+document.addEventListener('DOMContentLoaded', async () => {
+    const isBrowsePage = window.location.pathname.includes('indexBrowse.html');
 
-    fetchRow('rowKazakh', 'rating_desc'); 
+    const rowCalls = [
+        { id: 'rowTrending', sort: 'rating_desc' },
+        { id: 'rowPopular', sort: 'clicks_desc' },
+        { id: 'rowNewest', sort: 'date_desc' },
+        { id: 'rowAction', sort: 'rating_desc', opts: { genre: 'Action' } },
+        { id: 'rowDrama', sort: 'rating_desc', opts: { genre: 'Drama' } },
+        { id: 'rowComedy', sort: 'rating_desc', opts: { genre: 'Comedy' } },
+        { id: 'rowSciFi', sort: 'rating_desc', opts: { genre: 'Sci-Fi' } },
+        { id: 'rowThriller', sort: 'rating_desc', opts: { genre: 'Thriller' } },
+        { id: 'rowAnimation', sort: 'rating_desc', opts: { genre: 'Animation' } },
+        { id: 'rowAdventure', sort: 'rating_desc', opts: { genre: 'Adventure' } },
+        { id: 'rowRomance', sort: 'rating_desc', opts: { genre: 'Romance' } },
+        { id: 'rowHiddenGems', sort: 'rating_desc', opts: { offset: 80 } },
+        { id: 'rowLongest', sort: 'duration_desc' },
+        { id: 'rowGrossing', sort: 'success_desc' },
+        { id: 'rowBinge', sort: 'duration_desc', opts: { offset: 25 } },
+        { id: 'rowKazakh', sort: 'rating_desc' }
+    ];
+
+    if (isBrowsePage) {
+        await initPersonalRows();
+        scheduleRowLoad(rowCalls);
+    } else {
+        rowCalls.forEach(call => fetchRow(call.id, call.sort, call.opts || {}));
+    }
 
     setupMarquee();
 });
 
-async function fetchRow(containerId, sortType) {
+function scheduleRowLoad(calls) {
+    if (!Array.isArray(calls) || calls.length === 0) return;
+
+    const eagerCount = 3;
+    calls.forEach((call, index) => {
+        if (index < eagerCount) {
+            fetchRow(call.id, call.sort, call.opts || {});
+        }
+    });
+
+    const lazyCalls = calls.slice(eagerCount);
+    if (lazyCalls.length === 0) return;
+
+    if ('IntersectionObserver' in window) {
+        const observer = new IntersectionObserver((entries, obs) => {
+            entries.forEach(entry => {
+                if (!entry.isIntersecting) return;
+                const targetId = entry.target?.id;
+                const match = lazyCalls.find(call => call.id === targetId);
+                if (match) {
+                    fetchRow(match.id, match.sort, match.opts || {});
+                }
+                obs.unobserve(entry.target);
+            });
+        }, { root: null, rootMargin: '200px 0px', threshold: 0.1 });
+
+        lazyCalls.forEach(call => {
+            const el = document.getElementById(call.id);
+            if (el) observer.observe(el);
+        });
+        return;
+    }
+
+    lazyCalls.forEach((call, index) => {
+        setTimeout(() => {
+            fetchRow(call.id, call.sort, call.opts || {});
+        }, index * 120);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initHeroPreferencesPanel();
+    initHoverModalInteractions();
+});
+
+async function fetchRow(containerId, sortType, options = {}) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
+    const {
+        limit = 20,
+        offset = 0,
+        genre = '',
+        year = 1900,
+        actor = '',
+        director = ''
+    } = options;
+
     try {
-        // Fetch top 20  
-        const res = await fetch(`http://localhost:3000/movies/library?sort=${sortType}&limit=20`);
+        const params = new URLSearchParams({
+            sort: sortType,
+            limit: String(limit),
+            offset: String(offset),
+            year: String(year)
+        });
+
+        if (genre) params.set('genre', genre);
+        if (actor) params.set('actor', actor);
+        if (director) params.set('director', director);
+
+        const res = await fetch(`http://localhost:3000/movies/library?${params.toString()}`);
         const movies = await res.json();
 
         container.innerHTML = movies.map(movie => createCard(movie)).join('');
@@ -514,24 +617,218 @@ async function fetchRow(containerId, sortType) {
     }
 }
 
+async function initPersonalRows() {
+    const isBrowsePage = window.location.pathname.includes('indexBrowse.html');
+    if (!isBrowsePage) return;
+
+    await Promise.all([
+        loadMyListRow(),
+        loadHistoryRow()
+    ]);
+}
+
+async function loadMyListRow() {
+    const section = document.getElementById('myListRowSection');
+    const container = document.getElementById('rowMyList');
+    if (!section || !container) return;
+
+    const list = JSON.parse(localStorage.getItem('myList') || '[]');
+    if (!Array.isArray(list) || list.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    const movies = await fetchMoviesByIds(list.slice(0, 12));
+    if (movies.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    container.innerHTML = movies.map(movie => createCard(movie)).join('');
+}
+
+async function loadHistoryRow() {
+    const section = document.getElementById('historyRowSection');
+    const container = document.getElementById('rowHistory');
+    if (!section || !container) return;
+
+    const prefs = JSON.parse(localStorage.getItem('userPreferences') || '{}');
+    const recent = JSON.parse(localStorage.getItem('recentMovieClicks') || '[]');
+    const history = Array.from(new Set([...(prefs.clickedMovies || []), ...recent]));
+
+    if (!Array.isArray(history) || history.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    const movies = await fetchMoviesByIds(history.slice(0, 12));
+    if (movies.length === 0) {
+        section.style.display = 'none';
+        return;
+    }
+
+    section.style.display = 'block';
+    container.innerHTML = movies.map(movie => createCard(movie)).join('');
+}
+
+async function fetchMoviesByIds(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) return [];
+    const uniqueIds = Array.from(new Set(ids.map(id => String(id))));
+
+    const requests = uniqueIds.map(id =>
+        fetch(`http://localhost:3000/movie/${id}`).then(res => res.ok ? res.json() : null)
+    );
+
+    const results = await Promise.allSettled(requests);
+    return results
+        .filter(r => r.status === 'fulfilled' && r.value)
+        .map(r => r.value);
+}
+
 function createCard(movie) {
     const plusIconSVG = `<svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M19 11h-6V5h-2v6H5v2h6v6h2v-6h6v-2z" fill="currentColor"/></svg>`;
+    const year = movie.release_date ? String(movie.release_date).slice(-4) : (movie.Year || '----');
+    const runtime = movie.Runtime || '-- min';
+    const rating = movie.Rating || movie.imdb_rating || '--';
+    const plot = movie.Plot || 'No plot summary available.';
 
     return `
-        <div class="grid-card">
-            <img src="${movie.poster_full_url}" onclick="window.location.href='movieInfo.html?id=${movie.ID}'" onerror="this.src='/img/placeholder.jpg'">
+        <div class="grid-card" data-id="${movie.ID}" data-title="${movie['Movie Name']}" data-year="${year}" data-runtime="${runtime}" data-rating="${rating}" data-plot="${plot}" onmouseenter="handleCardHover(this)" onmouseleave="handleCardLeave(this)">
+            <img src="${movie.poster_full_url}" loading="lazy" onclick="window.location.href='movieInfo.html?id=${movie.ID}'" onerror="this.src='/img/LOGO_Short.png'">
             <div class="card-hover-info">
-                <div class="hover-btns">
-                    <button class="hover-play" onclick="window.location.href='movieInfo.html?id=${movie.ID}'">▶</button>
-
+                <div class="hover-preview">
+                    <iframe class="card-trailer" title="Trailer" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
                 </div>
-                <div class="info-text">
-                    <h4>${movie['Movie Name']}</h4>
-                    <span class="match-score">⭐ ${movie.Rating}</span>
+                <div class="hover-meta">
+                    <div class="hover-meta-title">${movie['Movie Name']}</div>
+                    <div class="hover-meta-stats">
+                        <span>⭐ ${rating}</span>
+                        <span>${year}</span>
+                        <span>${runtime}</span>
+                    </div>
+                    <p class="hover-meta-desc">${plot}</p>
+                    <div class="hover-meta-actions">
+                        <button class="hover-play" onclick="window.location.href='movieInfo.html?id=${movie.ID}'">▶</button>
+                        <a class="hover-info" href="movieInfo.html?id=${movie.ID}">More Info</a>
+                    </div>
                 </div>
             </div>
         </div>
     `;
+}
+
+window.handleCardHover = async function(card) {
+    if (!card) return;
+    const modal = document.getElementById('hoverModal');
+    const modalTrailer = document.getElementById('hoverModalTrailer');
+    if (!modal || !modalTrailer) return;
+
+    if (window.__hoverModalHideTimer) {
+        clearTimeout(window.__hoverModalHideTimer);
+        window.__hoverModalHideTimer = null;
+    }
+
+    if (window.__hoverModalShowTimer) {
+        clearTimeout(window.__hoverModalShowTimer);
+        window.__hoverModalShowTimer = null;
+    }
+
+    window.__hoverCardTarget = card;
+
+    window.__hoverModalShowTimer = setTimeout(async () => {
+        if (window.__hoverCardTarget !== card) return;
+
+        const title = card.dataset.title || 'Title';
+        const year = card.dataset.year || '----';
+        const runtime = card.dataset.runtime || '-- min';
+        const rating = card.dataset.rating || '--';
+        const plot = card.dataset.plot || 'No plot summary available.';
+        const movieId = card.dataset.id || '';
+
+        const titleEl = document.getElementById('hoverModalTitle');
+        const ratingEl = document.getElementById('hoverModalRating');
+        const yearEl = document.getElementById('hoverModalYear');
+        const runtimeEl = document.getElementById('hoverModalRuntime');
+        const descEl = document.getElementById('hoverModalDesc');
+
+        if (titleEl) titleEl.textContent = title;
+        if (ratingEl) ratingEl.textContent = `⭐ ${rating}`;
+        if (yearEl) yearEl.textContent = year;
+        if (runtimeEl) runtimeEl.textContent = runtime;
+        if (descEl) descEl.textContent = plot;
+
+        const moreInfo = document.getElementById('hoverModalMoreInfo');
+        if (moreInfo) {
+            moreInfo.href = movieId ? `movieInfo.html?id=${movieId}` : 'movieInfo.html';
+        }
+
+        modal.classList.add('active');
+
+        if (card.dataset.trailerId) {
+            modalTrailer.src = `https://www.youtube.com/embed/${card.dataset.trailerId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${card.dataset.trailerId}&rel=0`;
+            return;
+        }
+
+        if (!window.fetchYTId) return;
+
+        try {
+            const tId = await window.fetchYTId(title);
+            if (tId) {
+                card.dataset.trailerId = tId;
+                modalTrailer.src = `https://www.youtube.com/embed/${tId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${tId}&rel=0`;
+            }
+        } catch (err) {
+            console.warn('Trailer fetch failed:', err);
+        }
+    }, 3000);
+};
+
+window.handleCardLeave = function(card) {
+    const modal = document.getElementById('hoverModal');
+    const modalTrailer = document.getElementById('hoverModalTrailer');
+    if (!modal || !modalTrailer) return;
+
+    if (window.__hoverCardTarget === card) {
+        window.__hoverCardTarget = null;
+    }
+
+    if (window.__hoverModalShowTimer) {
+        clearTimeout(window.__hoverModalShowTimer);
+        window.__hoverModalShowTimer = null;
+    }
+
+    if (!window.__hoverModalHovered) {
+        window.__hoverModalHideTimer = setTimeout(() => {
+            modal.classList.remove('active');
+            modalTrailer.src = '';
+        }, 120);
+    }
+};
+
+function initHoverModalInteractions() {
+    const modal = document.getElementById('hoverModal');
+    const modalTrailer = document.getElementById('hoverModalTrailer');
+    if (!modal || !modalTrailer) return;
+
+    modal.addEventListener('mouseenter', () => {
+        window.__hoverModalHovered = true;
+        if (window.__hoverModalHideTimer) {
+            clearTimeout(window.__hoverModalHideTimer);
+            window.__hoverModalHideTimer = null;
+        }
+    });
+
+    modal.addEventListener('mouseleave', () => {
+        window.__hoverModalHovered = false;
+        if (window.__hoverModalHideTimer) {
+            clearTimeout(window.__hoverModalHideTimer);
+        }
+        window.__hoverModalHideTimer = setTimeout(() => {
+            modal.classList.remove('active');
+            modalTrailer.src = '';
+        }, 120);
+    });
 }
 
 // --- MARQUEE LOGIC ---
@@ -617,6 +914,7 @@ function handleSignup(e) {
     const password = passInput ? passInput.value : "";
     
     const btn = document.querySelector('.btn-signup');
+    const userLanguage = localStorage.getItem('userLanguage') || (window.i18n ? window.i18n.getCurrentLanguage() : 'en');
     const originalText = btn ? btn.innerText : "Create Account";
     
     // UI Loading State
@@ -635,7 +933,8 @@ function handleSignup(e) {
                     username,
                     userEmail: email,
                     userTier: tier,
-                    userPassword: password
+                    userPassword: password,
+                    userLanguage
                 })
             });
 
@@ -659,6 +958,7 @@ function handleSignup(e) {
             localStorage.setItem('userTier', user.userTier || tier);
             localStorage.setItem('password', password);
             localStorage.setItem('allUIDs', JSON.stringify(user.allUIDs || []));
+            localStorage.setItem('userLanguage', user.userLanguage || userLanguage);
             
             // Initialize usage counters as strings for subscription logic
             localStorage.setItem('searchCount', '0');
@@ -700,7 +1000,7 @@ function handleSignup(e) {
         
         sessionStorage.setItem('greeted', 'true');
 
-        location.reload(); 
+        safeReload();
         
     }, 1500);
 }
@@ -781,6 +1081,11 @@ window.persistUserStats = function() {
     }).catch(err => console.error('User stats save error:', err));
 };
 
+function safeReload() {
+    if (window.location.pathname.includes('movieInfo.html')) return;
+    location.reload();
+}
+
 function ensureSignInModal() {
     if (document.getElementById('signInModal')) return;
 
@@ -854,7 +1159,7 @@ window.handleSignIn = async function(e) {
         localStorage.setItem('password', user.userPassword || userPassword);
 
         closeSignInModal();
-        location.reload();
+        safeReload();
     } catch (err) {
         console.error('Sign-in error:', err);
         showLimitToast('Sign-in failed');
@@ -918,7 +1223,7 @@ window.toggleSidebar = window.toggleAccountMenu;
 window.logout = function() {
     window.persistUserStats();
     localStorage.clear();
-    location.reload();
+    safeReload();
 };
 // Stop the menu from closing itself when you click inside it
 document.addEventListener('DOMContentLoaded', () => {
@@ -1089,7 +1394,7 @@ window.logout = function() {
     if (!localStorage.getItem('username')) return; 
     if (window.persistUserStats) window.persistUserStats();
     localStorage.clear();
-    location.reload();
+    safeReload();
 };
 //CLOSE THE SETTINGS MODAL
 window.closeSettings = function() {
@@ -1395,11 +1700,19 @@ window.showToast = function(message, isError = false) {
  window.toggleMobileMenu = function() {
     const nav = document.getElementById('navLinks');
     const burger = document.querySelector('.hamburger');
-    
-    nav.classList.toggle('active');
-    
+    const overlay = document.querySelector('.nav-overlay');
 
-    burger.classList.toggle('toggle-burger');
+    if (!nav) return;
+
+    const isOpen = !nav.classList.contains('active');
+    nav.classList.toggle('active', isOpen);
+    if (overlay) {
+        overlay.classList.toggle('active', isOpen);
+    }
+
+    if (burger) {
+        burger.classList.toggle('toggle-burger', isOpen);
+    }
 };
 /* =========================================
    MOBILE SWIPE LOGIC (Global Scope)
@@ -1460,6 +1773,7 @@ function toggleSiteTheme() {
 function updateThemeButton(theme) {
     const icon = document.getElementById('themeIcon');
     const label = document.getElementById('themeLabel');
+    if (!icon || !label) return;
     
     if (theme === 'dark') {
         icon.textContent = '🌙';
@@ -1479,6 +1793,7 @@ window.addEventListener('DOMContentLoaded', () => {
 // Language selection functions
 function toggleLanguageMenu() {
     const dropdown = document.getElementById('languageDropdown');
+    if (!dropdown) return;
     dropdown.classList.toggle('active');
 }
 
@@ -1497,6 +1812,7 @@ function updateLanguageButton(lang) {
     
     const currentFlag = document.getElementById('currentFlag');
     const currentLangCode = document.getElementById('currentLangCode');
+    if (!currentFlag || !currentLangCode) return;
     
     if (flags[lang]) {
         currentFlag.textContent = flags[lang].flag;
@@ -1542,6 +1858,7 @@ window.handleSignup = async function(event) {
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value;
     const tier = document.getElementById('signupTier').value;
+    const userLanguage = localStorage.getItem('userLanguage') || (window.i18n ? window.i18n.getCurrentLanguage() : 'en');
     
     if (!username || !email || !password) {
         showToast('Please fill all fields', 'error');
@@ -1560,7 +1877,8 @@ window.handleSignup = async function(event) {
                 username,
                 userEmail: email,
                 userPassword: password,
-                userTier: tier
+                userTier: tier,
+                userLanguage
             })
         });
         
@@ -1574,6 +1892,7 @@ window.handleSignup = async function(event) {
             localStorage.setItem('userTier', data.userTier);
             localStorage.setItem('searchCount', data.searchCount || 0);
             localStorage.setItem('viewCount', data.viewCount || 0);
+            localStorage.setItem('userLanguage', data.userLanguage || userLanguage);
             
             showToast(window.i18n.t('notif_signup_success'), 'success');
             closeSignupModal();
@@ -1632,6 +1951,82 @@ window.addEventListener('DOMContentLoaded', () => {
     // Initialize continue watching after a short delay
     setTimeout(initContinueWatching, 500);
 });
+
+/* =========================================
+   DEEPL AUTO-TRANSLATION BOOTSTRAP
+   ========================================= */
+
+function initDeepLAutoTranslate() {
+    const placeholderKey = 'abcd';
+    localStorage.setItem('deeplApiKey', placeholderKey);
+    const deeplInput = document.getElementById('deeplApiKey');
+    if (deeplInput) deeplInput.value = placeholderKey;
+    return;
+}
+
+function initHeroPreferencesPanel() {
+    const isBrowsePage = window.location.pathname.includes('indexBrowse.html');
+    if (!isBrowsePage) return;
+
+    const tag = document.getElementById('heroTag');
+    const panel = document.getElementById('heroPrefPanel');
+    if (!tag || !panel) return;
+
+    const PREFS_KEY = 'userPreferences';
+    let hideTimer;
+
+    const renderPanel = () => {
+        const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+        const genreClicks = prefs.genreClicks || {};
+        const entries = Object.entries(genreClicks).sort((a, b) => b[1] - a[1]);
+
+        if (entries.length === 0) {
+            panel.innerHTML = '<span style="color:#888; font-size:0.85rem;">No genre history yet.</span>';
+            return;
+        }
+
+        panel.innerHTML = entries.map(([genre, count]) => `
+            <span class="hero-pref-chip" data-genre="${genre}">
+                ${genre} <strong>${count}</strong>
+                <button class="hero-pref-close" data-genre="${genre}" aria-label="Remove ${genre}">✕</button>
+            </span>
+        `).join('');
+    };
+
+    const showPanel = () => {
+        clearTimeout(hideTimer);
+        renderPanel();
+        panel.classList.add('active');
+    };
+
+    const hidePanel = () => {
+        hideTimer = setTimeout(() => {
+            panel.classList.remove('active');
+        }, 200);
+    };
+
+    tag.addEventListener('mouseenter', showPanel);
+    tag.addEventListener('mouseleave', hidePanel);
+    panel.addEventListener('mouseenter', showPanel);
+    panel.addEventListener('mouseleave', hidePanel);
+
+    panel.addEventListener('click', (event) => {
+        const btn = event.target.closest('.hero-pref-close');
+        if (!btn) return;
+
+        const genre = btn.dataset.genre;
+        if (!genre) return;
+
+        const prefs = JSON.parse(localStorage.getItem(PREFS_KEY) || '{}');
+        if (prefs.genreClicks && prefs.genreClicks[genre] !== undefined) {
+            delete prefs.genreClicks[genre];
+            localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+            renderPanel();
+        }
+    });
+}
+
+window.addEventListener('DOMContentLoaded', initDeepLAutoTranslate);
 
 // Refresh continue watching when user interacts with movies
 window.addEventListener('movieViewed', () => {

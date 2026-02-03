@@ -4,24 +4,41 @@
    ========================================= */
 
 const PREFS_KEY = 'userPreferences';
-const API_BASE_URL = window.location.origin.includes('localhost') 
-    ? 'http://localhost:3000' 
+const isLocalApi = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+const API_BASE_URL = isLocalApi
+    ? 'http://localhost:3000'
     : window.location.origin;
 const MOVIE_DATA_LOAD_DELAY = 1000; // Wait for movie data to load from page
 
 // Get or initialize user preferences
 function getUserPreferences() {
     const prefs = localStorage.getItem(PREFS_KEY);
+    const defaults = {
+        genreClicks: {},      // { "Action": 5, "Drama": 3 }
+        yearRangeClicks: {},  // { "2020s": 10, "2010s": 5 }
+        ratingPreference: 0,  // Average rating of watched movies
+        watchedMovies: [],    // List of movie IDs
+        clickedMovies: []     // List of recently clicked movies
+    };
+
     if (!prefs) {
-        return {
-            genreClicks: {},      // { "Action": 5, "Drama": 3 }
-            yearRangeClicks: {},  // { "2020s": 10, "2010s": 5 }
-            ratingPreference: 0,  // Average rating of watched movies
-            watchedMovies: [],    // List of movie IDs
-            clickedMovies: []     // List of recently clicked movies
-        };
+        return defaults;
     }
-    return JSON.parse(prefs);
+
+    try {
+        const parsed = JSON.parse(prefs);
+        return {
+            ...defaults,
+            ...parsed,
+            genreClicks: parsed?.genreClicks && typeof parsed.genreClicks === 'object' ? parsed.genreClicks : {},
+            yearRangeClicks: parsed?.yearRangeClicks && typeof parsed.yearRangeClicks === 'object' ? parsed.yearRangeClicks : {},
+            watchedMovies: Array.isArray(parsed?.watchedMovies) ? parsed.watchedMovies : [],
+            clickedMovies: Array.isArray(parsed?.clickedMovies) ? parsed.clickedMovies : []
+        };
+    } catch (error) {
+        console.warn('Invalid preferences in storage, resetting:', error);
+        return defaults;
+    }
 }
 
 // Save user preferences
@@ -101,7 +118,7 @@ function markMovieWatched(movieId, rating) {
 // Get top genres from user preferences
 function getTopGenres(limit = 3) {
     const prefs = getUserPreferences();
-    const genres = Object.entries(prefs.genreClicks)
+    const genres = Object.entries(prefs.genreClicks || {})
         .sort((a, b) => b[1] - a[1])
         .slice(0, limit)
         .map(entry => entry[0]);
@@ -112,7 +129,7 @@ function getTopGenres(limit = 3) {
 // Get top year range from user preferences
 function getTopYearRange() {
     const prefs = getUserPreferences();
-    const yearRanges = Object.entries(prefs.yearRangeClicks)
+    const yearRanges = Object.entries(prefs.yearRangeClicks || {})
         .sort((a, b) => b[1] - a[1]);
     
     if (yearRanges.length === 0) return null;
@@ -226,7 +243,7 @@ async function loadRecommendations() {
     
     // Render movies
     container.innerHTML = movies.map(movie => {
-        const poster = movie.poster_full_url || '/img/placeholder.jpg';
+        const poster = movie.poster_full_url || '/img/LOGO_Short.png';
         const title = movie['Movie Name'] || movie.title || 'Unknown Title';
         const rating = movie.Rating || 'N/A';
         const genre = movie.Genre || '';

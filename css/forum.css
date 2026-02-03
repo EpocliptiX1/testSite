@@ -5,15 +5,18 @@
 
 .forum-container {
     display: flex;
-    min-height: calc(100vh - 70px);
-    margin-top: 70px;
+    margin: 70px auto 0;
     gap: 20px;
-    padding: 20px 4%;
+    padding: 20px;
+    width: min(100%, 1400px);
 }
 
 /* Sidebar: Movies List */
 .forum-sidebar {
     width: 300px;
+    flex: 0 0 300px;
+    min-width: 260px;
+    align-self: flex-start;
     background: var(--bg-card);
     border-radius: 12px;
     padding: 20px;
@@ -25,11 +28,14 @@
 
 .sidebar-header {
     margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .sidebar-header h2 {
     font-size: 1.3rem;
-    margin-bottom: 15px;
+    margin-bottom: 0;
     color: var(--text-primary);
 }
 
@@ -87,8 +93,9 @@
 }
 
 .movie-item.active {
-    background: var(--accent-primary);
-    color: white;
+    background: #000000;
+    color: #fff;
+    border-color: #2f2f2f;
 }
 
 .movie-item-poster {
@@ -106,7 +113,7 @@
 }
 
 .movie-item.active .movie-item-info h4 {
-    color: white;
+    color: #fff;
 }
 
 .movie-item-info p {
@@ -116,7 +123,7 @@
 }
 
 .movie-item.active .movie-item-info p {
-    color: rgba(255, 255, 255, 0.8);
+    color: rgba(255, 255, 255, 0.7);
 }
 
 /* Main Content Area */
@@ -247,6 +254,31 @@
     margin-bottom: 12px;
 }
 
+.thread-delete-btn {
+    margin-left: auto;
+    background: transparent;
+    border: 1px solid #333;
+    color: #aaa;
+    border-radius: 6px;
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.thread-delete-btn:hover {
+    border-color: #f44336;
+    color: #f96d00;
+}
+
+.thread-detail-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
 .thread-thumbnail {
     width: 80px;
     height: 80px;
@@ -293,8 +325,39 @@
 }
 
 /* Thread Detail Modal */
+.thread-detail {
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.thread-detail .settings-content {
+    max-height: 90vh;
+}
+
 .thread-detail .modal-body {
     padding: 0;
+    max-height: calc(90vh - 120px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #f96d00 #111;
+}
+
+.thread-detail .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.thread-detail .modal-body::-webkit-scrollbar-track {
+    background: #111;
+}
+
+.thread-detail .modal-body::-webkit-scrollbar-thumb {
+    background-color: #f96d00;
+    border-radius: 10px;
+}
+
+.thread-detail img#threadDetailImage {
+    max-height: 40vh;
+    object-fit: contain;
 }
 
 .thread-detail-content {
@@ -314,6 +377,24 @@
     gap: 10px;
 }
 
+/* Create Thread Description Input */
+#createThreadModal .input-group textarea {
+    width: 100%;
+    min-height: 140px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 1rem;
+    resize: vertical;
+}
+
+#createThreadModal .input-group textarea:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+}
+
 /* Comments Section */
 .comments-section {
     padding: 20px;
@@ -330,8 +411,23 @@
     flex-direction: column;
     gap: 12px;
     margin-bottom: 20px;
-    max-height: 400px;
+    max-height: 320px;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #f96d00 #111;
+}
+
+.comments-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.comments-list::-webkit-scrollbar-track {
+    background: #111;
+}
+
+.comments-list::-webkit-scrollbar-thumb {
+    background-color: #f96d00;
+    border-radius: 10px;
 }
 
 .comment-item {
@@ -422,11 +518,57 @@
 
 /* Forum Modal Adjustments */
 .forum-modal {
+    width: min(680px, 90vw);
+    /* height: min(640px, 80vh); */
     max-width: 700px;
+    max-height: 85vh;
+    overflow: hidden;
+    background: rgba(15, 15, 15, 0.95);
+    border: 1px solid #333;
+}
+
+.forum-modal .modal-header {
+    padding-right: 70px;
+}
+
+.forum-modal .close-settings {
+    top: 24px;
+    right: 24px;
+    transform: none;
+    z-index: 2;
 }
 
 .forum-modal .modal-body {
     padding: 20px;
+    overflow-y: auto;
+    max-height: calc(1000px - 120px);
+}
+
+#threadDetailModal {
+    position: static;
+    inset: auto;
+    width: 100%;
+    height: auto;
+    display: none;
+    align-items: stretch;
+    justify-content: stretch;
+    background: transparent;
+}
+
+#threadDetailModal.active {
+    display: block;
+}
+
+#threadDetailModal .settings-content {
+    width: 100%;
+    max-width: none;
+    height: auto;
+    max-height: none;
+}
+
+#threadsContainer.show-detail .thread-card,
+#threadsContainer.show-detail .empty-state {
+    display: none;
 }
 
 /* Responsive Design */
@@ -506,15 +648,13 @@
 }
 
 .search-results-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
+    position: static;
+    width: 100%;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 8px;
     margin-top: 8px;
-    max-height: 400px;
+    max-height: 600px;
     overflow-y: auto;
     box-shadow: var(--shadow-lg);
     z-index: 1000;

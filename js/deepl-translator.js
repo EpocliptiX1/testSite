@@ -5,11 +5,16 @@
 
 class DeepLTranslator {
     constructor() {
+        this.useBackend = true;
         this.apiKey = localStorage.getItem('deeplApiKey') || '';
         this.apiEndpoint = localStorage.getItem('deeplApiEndpoint') || 'https://api-free.deepl.com/v2/translate';
+        const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        this.backendEndpoint = isLocal ? 'http://localhost:3000/translate' : '/translate';
         this.sourceLanguage = 'EN'; // Default source
         this.targetLanguage = localStorage.getItem('targetLanguage') || 'EN';
         this.cache = {}; // Cache translations to reduce API calls
+        this.isTranslating = false;
+        this.translateTimer = null;
     }
 
     // Set API key and optionally endpoint (for pro users)
@@ -32,6 +37,7 @@ class DeepLTranslator {
 
     // Check if API key is configured
     isConfigured() {
+        if (this.useBackend) return true;
         return this.apiKey && this.apiKey.length > 0;
     }
 
@@ -57,7 +63,7 @@ class DeepLTranslator {
             return text;
         }
 
-        const targetLang = options.targetLang || this.targetLanguage;
+        const targetLang = String(options.targetLang || this.targetLanguage || 'EN').toUpperCase();
         const sourceLang = options.sourceLang || this.sourceLanguage;
 
         // Check cache
@@ -67,17 +73,52 @@ class DeepLTranslator {
         }
 
         try {
+            if (this.useBackend) {
+                const sourcePayload = sourceLang && String(sourceLang).toUpperCase() !== 'AUTO'
+                    ? String(sourceLang).toUpperCase()
+                    : undefined;
+
+                const response = await fetch(this.backendEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        target_lang: targetLang,
+                        source_lang: sourcePayload
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error('DeepL proxy error body:', errorBody);
+                    throw new Error(`DeepL proxy error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                const translatedText = data.translations?.[0]?.text || text;
+                if (this.isRefusalTranslation(translatedText)) {
+                    return text;
+                }
+                this.cache[cacheKey] = translatedText;
+                return translatedText;
+            }
+
+            const params = new URLSearchParams({
+                text: text,
+                target_lang: targetLang
+            });
+
+            if (sourceLang && sourceLang !== 'AUTO') {
+                params.append('source_lang', sourceLang);
+            }
+
             const response = await fetch(this.apiEndpoint, {
                 method: 'POST',
                 headers: {
                     'Authorization': `DeepL-Auth-Key ${this.apiKey}`,
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: new URLSearchParams({
-                    text: text,
-                    target_lang: targetLang,
-                    source_lang: sourceLang
-                })
+                body: params
             });
 
             if (!response.ok) {
@@ -86,6 +127,9 @@ class DeepLTranslator {
 
             const data = await response.json();
             const translatedText = data.translations[0].text;
+            if (this.isRefusalTranslation(translatedText)) {
+                return text;
+            }
 
             // Cache the translation
             this.cache[cacheKey] = translatedText;
@@ -103,21 +147,52 @@ class DeepLTranslator {
             return texts;
         }
 
-        const targetLang = options.targetLang || this.targetLanguage;
+        const targetLang = String(options.targetLang || this.targetLanguage || 'EN').toUpperCase();
         const sourceLang = options.sourceLang || this.sourceLanguage;
 
         try {
+            if (this.useBackend) {
+                const sourcePayload = sourceLang && String(sourceLang).toUpperCase() !== 'AUTO'
+                    ? String(sourceLang).toUpperCase()
+                    : undefined;
+
+                const response = await fetch(this.backendEndpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: texts,
+                        target_lang: targetLang,
+                        source_lang: sourcePayload
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorBody = await response.text();
+                    console.error('DeepL proxy error body:', errorBody);
+                    throw new Error(`DeepL proxy error: ${response.status}`);
+                }
+
+                const data = await response.json();
+                return (data.translations || []).map((t, idx) => {
+                    const candidate = t.text;
+                    return this.isRefusalTranslation(candidate) ? texts[idx] : candidate;
+                });
+            }
+
+            const params = new URLSearchParams();
+            texts.forEach(text => params.append('text', text));
+            params.append('target_lang', targetLang);
+            if (sourceLang && sourceLang !== 'AUTO') {
+                params.append('source_lang', sourceLang);
+            }
+
             const response = await fetch(this.apiEndpoint, {
                 method: 'POST',
                 headers: {
                     'Authorization': `DeepL-Auth-Key ${this.apiKey}`,
                     'Content-Type': 'application/x-www-form-urlencoded'
                 },
-                body: new URLSearchParams({
-                    text: texts,
-                    target_lang: targetLang,
-                    source_lang: sourceLang
-                })
+                body: params
             });
 
             if (!response.ok) {
@@ -125,7 +200,10 @@ class DeepLTranslator {
             }
 
             const data = await response.json();
-            return data.translations.map(t => t.text);
+            return data.translations.map((t, idx) => {
+                const candidate = t.text;
+                return this.isRefusalTranslation(candidate) ? texts[idx] : candidate;
+            });
         } catch (error) {
             console.error('Batch translation error:', error);
             return texts; // Return original texts on error
@@ -170,6 +248,113 @@ class DeepLTranslator {
         elements.forEach(element => {
             element.textContent = element.getAttribute('data-original-text');
         });
+    }
+
+    normalizeTargetLanguage(lang) {
+        const map = {
+            en: 'EN',
+            ru: 'RU',
+            kz: 'RU'
+        };
+        return map[String(lang || '').toLowerCase()] || 'EN';
+    }
+
+    shouldTranslateText(text) {
+        const trimmed = String(text || '').trim();
+        if (!trimmed) return false;
+        if (trimmed.length < 2) return false;
+        if (!/[A-Za-zА-Яа-яЁё]/.test(trimmed)) return false;
+        return true;
+    }
+
+    async translateTextNodes(root = document.body, options = {}) {
+        if (!root || this.isTranslating) return;
+        this.isTranslating = true;
+
+        try {
+            const nodes = [];
+            const texts = [];
+            const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+                acceptNode: (node) => {
+                    const parent = node.parentElement;
+                    if (!parent) return NodeFilter.FILTER_REJECT;
+                    const tag = parent.tagName;
+                    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEXTAREA', 'INPUT', 'SELECT', 'OPTION'].includes(tag)) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+                    if (parent.closest('[data-no-translate], .no-translate')) {
+                        return NodeFilter.FILTER_REJECT;
+                    }
+
+                    const originalText = node.__deeplOriginalText ?? node.nodeValue;
+                    if (!this.shouldTranslateText(originalText)) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+
+            let current;
+            while ((current = walker.nextNode())) {
+                const originalText = current.__deeplOriginalText ?? current.nodeValue;
+                if (!current.__deeplOriginalText) {
+                    current.__deeplOriginalText = current.nodeValue;
+                }
+                nodes.push(current);
+                texts.push(originalText);
+            }
+
+            const chunkSize = 40;
+            for (let i = 0; i < texts.length; i += chunkSize) {
+                const chunkTexts = texts.slice(i, i + chunkSize);
+                const translated = await this.translateBatch(chunkTexts, {
+                    targetLang: options.targetLang || this.targetLanguage,
+                    sourceLang: options.sourceLang || 'AUTO'
+                });
+
+                translated.forEach((text, idx) => {
+                    const node = nodes[i + idx];
+                    if (node) node.nodeValue = text;
+                });
+            }
+        } finally {
+            this.isTranslating = false;
+        }
+    }
+
+    resetTextNodes(root = document.body) {
+        if (!root) return;
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+        let current;
+        while ((current = walker.nextNode())) {
+            if (current.__deeplOriginalText !== undefined) {
+                current.nodeValue = current.__deeplOriginalText;
+            }
+        }
+    }
+
+    isRefusalTranslation(text) {
+        const normalized = String(text || '').trim().toLowerCase();
+        return normalized === 'извините, но я не могу вам в этом помочь.'
+            || normalized === 'извините, но я не могу вам помочь.';
+    }
+
+    async translatePageAuto() {
+        if (!this.isConfigured()) return;
+        const userLang = localStorage.getItem('userLanguage') || 'en';
+        const target = this.normalizeTargetLanguage(userLang);
+        if (target === 'EN') {
+            this.resetTextNodes();
+            return;
+        }
+
+        this.setTargetLanguage(target);
+        await this.translateTextNodes(document.body, { targetLang: target, sourceLang: 'AUTO' });
+    }
+
+    scheduleAutoTranslate(delayMs = 500) {
+        if (this.translateTimer) clearTimeout(this.translateTimer);
+        this.translateTimer = setTimeout(() => {
+            this.translatePageAuto();
+        }, delayMs);
     }
 
     // Get supported languages
@@ -219,6 +404,20 @@ window.addEventListener('targetLanguageChanged', (event) => {
     const targetLang = event.detail.language;
     deepLTranslator.setTargetLanguage(targetLang);
     deepLTranslator.translatePage();
+});
+
+window.addEventListener('languageChanged', (event) => {
+    const targetLang = deepLTranslator.normalizeTargetLanguage(event.detail.language);
+    if (targetLang === 'EN') {
+        deepLTranslator.resetTextNodes();
+        return;
+    }
+    deepLTranslator.setTargetLanguage(targetLang);
+    deepLTranslator.scheduleAutoTranslate(250);
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    deepLTranslator.scheduleAutoTranslate(500);
 });
 
 // Helper function to translate specific text

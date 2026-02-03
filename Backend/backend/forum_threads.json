@@ -1,1 +1,85 @@
-[]
+[
+  {
+    "id": "1770140433903",
+    "movieId": "110",
+    "title": "cool movie",
+    "description": "yes",
+    "image": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQwHYyHLYG39t0jfsaYGl1X1MPlABRjmlCQ_VYXtr6XDZOLPCzl6l06F1yNrwKLoDEtGta-80s0vV2vXjxU9CCRKAVy6CUibdlttHII6Et&s=10",
+    "username": "gbhaBanb",
+    "userUID": 2,
+    "score": 1,
+    "voters": {
+      "2": "up"
+    },
+    "comments": [
+      {
+        "id": "1770140440688",
+        "userUID": 2,
+        "username": "gbhaBanb",
+        "text": "i agree",
+        "createdAt": "2026-02-03T17:40:40.688Z",
+        "upvotes": 0,
+        "voters": {}
+      }
+    ],
+    "createdAt": "2026-02-03T17:40:33.903Z"
+  },
+  {
+    "id": "1770051645380",
+    "movieId": "1",
+    "title": "dwdwww",
+    "description": "dwdw",
+    "image": "",
+    "username": "user1",
+    "userUID": 1,
+    "score": -1,
+    "voters": {
+      "1": "down"
+    },
+    "comments": [],
+    "createdAt": "2026-02-02T17:00:45.380Z"
+  },
+  {
+    "id": "1770051645379",
+    "movieId": "1",
+    "title": "dwdwww",
+    "description": "dwdw",
+    "image": "",
+    "username": "user1",
+    "userUID": 1,
+    "score": 1,
+    "voters": {
+      "1": "up"
+    },
+    "comments": [],
+    "createdAt": "2026-02-02T17:00:45.379Z"
+  },
+  {
+    "id": "1770051635469",
+    "movieId": "1",
+    "title": "hawk",
+    "description": "tu7ah",
+    "image": "",
+    "username": "user1",
+    "userUID": 1,
+    "score": 1,
+    "voters": {
+      "1": "up"
+    },
+    "comments": [],
+    "createdAt": "2026-02-02T17:00:35.469Z"
+  },
+  {
+    "id": "1770051635465",
+    "movieId": "1",
+    "title": "hawk",
+    "description": "tu7ah",
+    "image": "",
+    "username": "user1",
+    "userUID": 1,
+    "score": 0,
+    "voters": {},
+    "comments": [],
+    "createdAt": "2026-02-02T17:00:35.465Z"
+  }
+]

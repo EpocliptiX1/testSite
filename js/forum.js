@@ -3,17 +3,40 @@
    Handles movie discussions, threads, voting
    ========================================= */
 
-const API_BASE = window.location.origin.includes('localhost') 
-    ? 'http://localhost:3000' 
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? 'http://localhost:3000'
     : window.location.origin;
 let currentMovieId = null;
 let currentThreadId = null;
 let forumMovies = [];
 let forumThreads = [];
+let currentComments = [];
+let pendingForumNav = null;
+let threadDetailHome = null;
+let pendingConfirmAction = null;
 
 // Initialize forum on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadForumMovies();
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadForumMovies();
+    await handlePendingForumNav();
+
+    const threadForm = document.getElementById('createThreadForm');
+    if (threadForm) threadForm.addEventListener('submit', submitThread);
+
+    const threadDetailModal = document.getElementById('threadDetailModal');
+    if (threadDetailModal) {
+        threadDetailHome = threadDetailModal.parentElement;
+    }
+
+    const commentInput = document.getElementById('commentInput');
+    if (commentInput) {
+        commentInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                submitComment(e);
+            }
+        });
+    }
 });
 
 // Load all movies that have discussion threads
@@ -45,9 +68,9 @@ function renderMoviesList() {
     }
 
     container.innerHTML = forumMovies.map(movie => `
-        <div class="movie-item ${currentMovieId === movie.movieId ? 'active' : ''}" 
-             onclick="selectMovie('${movie.movieId}', '${escapeHtml(movie.movieTitle)}')">
-            <img class="movie-item-poster" src="${movie.poster || '/img/placeholder.jpg'}" alt="${escapeHtml(movie.movieTitle)}">
+           <div class="movie-item ${currentMovieId === movie.movieId ? 'active' : ''}" 
+               onclick="selectMovie('${movie.movieId}', '${escapeHtml(movie.movieTitle)}', event)">
+            <img class="movie-item-poster" src="${movie.poster || '/img/LOGO_Short.png'}" alt="${escapeHtml(movie.movieTitle)}">
             <div class="movie-item-info">
                 <h4>${escapeHtml(movie.movieTitle)}</h4>
                 <p>${movie.threadCount || 0} threads</p>
@@ -57,11 +80,16 @@ function renderMoviesList() {
 }
 
 // Select a movie and load its threads
-async function selectMovie(movieId, movieTitle) {
+async function selectMovie(movieId, movieTitle, evt) {
     currentMovieId = movieId;
     
     // Update UI
-    document.getElementById('currentMovieTitle').textContent = movieTitle;
+    const titleEl = document.getElementById('currentMovieTitle');
+    if (titleEl) {
+        titleEl.textContent = movieTitle;
+        titleEl.setAttribute('data-original-text', movieTitle);
+        translateDynamicText(titleEl);
+    }
     document.getElementById('currentMovieDesc').textContent = 'Discussion threads for this movie';
     document.getElementById('createThreadBtn').style.display = 'block';
     
@@ -69,7 +97,7 @@ async function selectMovie(movieId, movieTitle) {
     document.querySelectorAll('.movie-item').forEach(item => {
         item.classList.remove('active');
     });
-    event.target.closest('.movie-item')?.classList.add('active');
+    evt?.target?.closest('.movie-item')?.classList.add('active');
     
     // Load threads for this movie
     await loadThreads(movieId);
@@ -104,17 +132,19 @@ function renderThreads() {
         return;
     }
 
+    const userUID = localStorage.getItem('userUID');
     container.innerHTML = forumThreads.map(thread => {
         const userVote = getUserVote(thread);
+        const isOwner = userUID && String(thread.userUID) === String(userUID);
         return `
-            <div class="thread-card" onclick="openThreadDetail('${thread.id}')">
+            <div class="thread-card" id="thread-${thread.id}" onclick="openThreadDetail('${thread.id}')">
                 <div class="thread-votes-column">
-                    <button class="vote-btn upvote ${userVote === 'up' ? 'active' : ''}" 
+                    <button type="button" class="vote-btn upvote ${userVote === 'up' ? 'active' : ''}" 
                             onclick="event.stopPropagation(); voteThreadInList('${thread.id}', 'up')">
                         <span>▲</span>
                     </button>
                     <span class="vote-score">${thread.score || 0}</span>
-                    <button class="vote-btn downvote ${userVote === 'down' ? 'active' : ''}" 
+                    <button type="button" class="vote-btn downvote ${userVote === 'down' ? 'active' : ''}" 
                             onclick="event.stopPropagation(); voteThreadInList('${thread.id}', 'down')">
                         <span>▼</span>
                     </button>
@@ -126,6 +156,9 @@ function renderThreads() {
                             <h3 class="thread-title">${escapeHtml(thread.title)}</h3>
                             <p class="thread-meta">Posted by ${escapeHtml(thread.username)} • UID: ${thread.userUID}</p>
                         </div>
+                        ${isOwner ? `
+                            <button type="button" class="thread-delete-btn" onclick="event.stopPropagation(); requestDeleteThread('${thread.id}')">✕</button>
+                        ` : ''}
                     </div>
                     <p class="thread-description">${escapeHtml(truncate(thread.description, 200))}</p>
                     <div class="thread-stats">
@@ -189,6 +222,7 @@ async function searchMoviesForForum() {
     searchTimeout = setTimeout(async () => {
         try {
             const response = await fetch(`${API_BASE}/search?q=${encodeURIComponent(query)}`);
+            if (!response.ok) throw new Error('Search failed');
             const movies = await response.json();
             
             if (movies.length === 0) {
@@ -199,9 +233,9 @@ async function searchMoviesForForum() {
             // Display results as dropdown items (similar to navbar search)
             container.innerHTML = movies.slice(0, 8).map(movie => `
                 <div class="search-item-forum" onclick="selectMovieForForum(${movie.ID}, '${escapeHtml(movie['Movie Name'])}', '${movie.poster_full_url || ''}', '${escapeHtml(movie.Genre || '')}')">
-                    <img src="${movie.poster_full_url || '/img/placeholder.jpg'}" 
+                    <img src="${movie.poster_full_url || '/img/LOGO_Short.png'}" 
                          alt="${escapeHtml(movie['Movie Name'])}"
-                         onerror="this.src='/img/placeholder.jpg'"
+                        onerror="this.src='/img/LOGO_Short.png'"
                          style="width: 50px; height: 75px; object-fit: cover; border-radius: 4px;">
                     <div class="search-info-forum">
                         <h5 style="margin: 0; font-size: 0.95rem; color: var(--text-primary);">${escapeHtml(movie['Movie Name'])}</h5>
@@ -283,7 +317,7 @@ function closeCreateThreadModal() {
 
 // Submit new thread
 async function submitThread(event) {
-    event.preventDefault();
+    if (event) event.preventDefault();
     
     const title = document.getElementById('threadTitle').value.trim();
     const description = document.getElementById('threadDescription').value.trim();
@@ -306,10 +340,22 @@ async function submitThread(event) {
         });
 
         if (!response.ok) throw new Error('Failed to create thread');
-        
+
+        const newThread = await response.json();
+        forumThreads.unshift({
+            ...newThread,
+            commentCount: 0
+        });
+        renderThreads();
+
+        setPendingForumNav({
+            movieId: currentMovieId,
+            threadId: newThread.id,
+            openThreadDetail: true
+        });
+
         showLimitToast('✅ Thread created!');
         closeCreateThreadModal();
-        await loadThreads(currentMovieId);
     } catch (error) {
         console.error('Error creating thread:', error);
         showLimitToast('❌ Failed to create thread');
@@ -318,8 +364,17 @@ async function submitThread(event) {
 
 // Vote on thread from list
 async function voteThreadInList(threadId, vote) {
-    await voteOnThread(threadId, vote);
-    await loadThreads(currentMovieId);
+    const result = await voteOnThread(threadId, vote);
+    if (!result) return;
+
+    updateThreadVoteState(threadId, vote, result.score);
+    renderThreads();
+
+    setPendingForumNav({
+        movieId: currentMovieId,
+        threadId,
+        openThreadDetail: false
+    });
 }
 
 // Open thread detail modal
@@ -351,16 +406,113 @@ async function openThreadDetail(threadId) {
         document.querySelector(`#threadDetailModal .vote-btn.${userVote}vote`)?.classList.add('active');
     }
 
+    const userUID = localStorage.getItem('userUID');
+    const deleteBtn = document.getElementById('threadDeleteBtn');
+    if (deleteBtn) {
+        deleteBtn.style.display = userUID && String(thread.userUID) === String(userUID) ? 'inline-flex' : 'none';
+    }
+
     // Load comments
     await loadComments(threadId);
+    await scrollToPendingComment(threadId);
 
-    // Show modal
-    document.getElementById('threadDetailModal').classList.add('active');
+    const threadDetailModal = document.getElementById('threadDetailModal');
+    const threadsContainer = document.getElementById('threadsContainer');
+
+    if (threadDetailModal && threadsContainer) {
+        threadsContainer.classList.add('show-detail');
+        if (threadDetailModal.parentElement !== threadsContainer) {
+            threadsContainer.appendChild(threadDetailModal);
+        }
+    }
+
+    // Show detail panel inline
+    threadDetailModal?.classList.add('active');
 }
 
 function closeThreadDetailModal() {
-    document.getElementById('threadDetailModal').classList.remove('active');
+    const threadDetailModal = document.getElementById('threadDetailModal');
+    const threadsContainer = document.getElementById('threadsContainer');
+
+    threadDetailModal?.classList.remove('active');
+    if (threadsContainer) {
+        threadsContainer.classList.remove('show-detail');
+    }
+    if (threadDetailModal && threadDetailHome && threadDetailModal.parentElement !== threadDetailHome) {
+        threadDetailHome.appendChild(threadDetailModal);
+    }
+    renderThreads();
     currentThreadId = null;
+}
+
+async function deleteThread(threadId) {
+    const userUID = localStorage.getItem('userUID');
+    if (!userUID || userUID === '0') {
+        showLimitToast('⚠️ Sign in to delete threads!');
+        return;
+    }
+
+    try {
+        const response = await fetch(`${API_BASE}/forum/threads/${threadId}`, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userUID: parseInt(userUID) })
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            showLimitToast(`⚠️ ${error.error || 'Failed to delete thread'}`);
+            return;
+        }
+
+        forumThreads = forumThreads.filter(t => String(t.id) !== String(threadId));
+        renderThreads();
+
+        if (currentThreadId === threadId) {
+            closeThreadDetailModal();
+        }
+
+        showLimitToast('✅ Thread deleted!');
+    } catch (error) {
+        console.error('Error deleting thread:', error);
+        showLimitToast('❌ Failed to delete thread');
+    }
+}
+
+function requestDeleteThread(threadId) {
+    openConfirmModal({
+        title: 'Delete thread?',
+        message: 'This will permanently remove the thread and its comments.',
+        confirmText: 'Delete',
+        onConfirm: () => deleteThread(threadId)
+    });
+}
+
+function openConfirmModal({ title, message, confirmText, onConfirm }) {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return;
+
+    const titleEl = document.getElementById('confirmTitle');
+    const messageEl = document.getElementById('confirmMessage');
+    const confirmBtn = document.getElementById('confirmYesBtn');
+
+    if (titleEl) titleEl.textContent = title || 'Are you sure?';
+    if (messageEl) messageEl.textContent = message || 'This action cannot be undone.';
+    if (confirmBtn) confirmBtn.textContent = confirmText || 'Confirm';
+
+    pendingConfirmAction = typeof onConfirm === 'function' ? onConfirm : null;
+    modal.classList.add('active');
+}
+
+function confirmModalProceed() {
+    if (pendingConfirmAction) pendingConfirmAction();
+    closeConfirmModal();
+}
+
+function closeConfirmModal() {
+    const modal = document.getElementById('confirmModal');
+    modal?.classList.remove('active');
+    pendingConfirmAction = null;
 }
 
 // Load comments for a thread
@@ -369,9 +521,11 @@ async function loadComments(threadId) {
         const response = await fetch(`${API_BASE}/forum/threads/${threadId}/comments`);
         if (!response.ok) throw new Error('Failed to load comments');
         const comments = await response.json();
+        currentComments = comments;
         renderComments(comments);
     } catch (error) {
         console.error('Error loading comments:', error);
+        currentComments = [];
         renderComments([]);
     }
 }
@@ -390,14 +544,14 @@ function renderComments(comments) {
     container.innerHTML = comments.map(comment => {
         const hasUpvoted = comment.voters && comment.voters[userUID];
         return `
-            <div class="comment-item">
+            <div class="comment-item" id="comment-${comment.id}" data-comment-id="${comment.id}">
                 <div class="comment-header">
                     <span class="comment-author">${escapeHtml(comment.username)}</span>
                     <span class="comment-meta">UID: ${comment.userUID} • ${formatDate(comment.createdAt)}</span>
                 </div>
                 <p class="comment-text">${escapeHtml(comment.text)}</p>
                 <div class="comment-actions">
-                    <button class="comment-upvote ${hasUpvoted ? 'active' : ''}" 
+                        <button type="button" class="comment-upvote ${hasUpvoted ? 'active' : ''}" 
                             onclick="upvoteComment('${comment.id}')">
                         <span>▲</span>
                         <span>${comment.upvotes || 0}</span>
@@ -410,14 +564,17 @@ function renderComments(comments) {
 
 // Vote on thread
 async function voteThread(vote) {
-    await voteOnThread(currentThreadId, vote);
-    
-    // Reload thread detail
-    const thread = forumThreads.find(t => t.id === currentThreadId);
-    if (thread) {
-        await loadThreads(currentMovieId);
-        openThreadDetail(currentThreadId);
-    }
+    const result = await voteOnThread(currentThreadId, vote);
+    if (!result) return;
+
+    updateThreadVoteState(currentThreadId, vote, result.score);
+    updateThreadDetailVoteUI(currentThreadId, vote, result.score);
+
+    setPendingForumNav({
+        movieId: currentMovieId,
+        threadId: currentThreadId,
+        openThreadDetail: true
+    });
 }
 
 // Vote on thread (shared function)
@@ -446,15 +603,17 @@ async function voteOnThread(threadId, vote) {
 
         const result = await response.json();
         showLimitToast('✅ Vote recorded!');
+        return result;
     } catch (error) {
         console.error('Error voting:', error);
         showLimitToast('❌ Failed to vote');
     }
+    return null;
 }
 
 // Submit comment
 async function submitComment(event) {
-    event.preventDefault();
+    if (event) event.preventDefault();
     
     const text = document.getElementById('commentInput').value.trim();
     const userUID = localStorage.getItem('userUID');
@@ -477,10 +636,26 @@ async function submitComment(event) {
         });
 
         if (!response.ok) throw new Error('Failed to post comment');
-        
+
+        const newComment = await response.json();
+        currentComments.unshift(newComment);
+        renderComments(currentComments);
+
+        const thread = forumThreads.find(t => t.id === currentThreadId);
+        if (thread) {
+            thread.commentCount = (thread.commentCount || 0) + 1;
+            renderThreads();
+        }
+
         document.getElementById('commentInput').value = '';
         showLimitToast('✅ Comment posted!');
-        await loadComments(currentThreadId);
+
+        setPendingForumNav({
+            movieId: currentMovieId,
+            threadId: currentThreadId,
+            commentId: newComment.id,
+            openThreadDetail: true
+        });
     } catch (error) {
         console.error('Error posting comment:', error);
         showLimitToast('❌ Failed to post comment');
@@ -510,11 +685,126 @@ async function upvoteComment(commentId) {
             return;
         }
 
+        const result = await response.json();
+        const target = currentComments.find(c => String(c.id) === String(commentId));
+        if (target) {
+            target.upvotes = result.upvotes;
+            if (!target.voters) target.voters = {};
+            target.voters[String(userUID)] = true;
+        }
+        renderComments(currentComments);
+
         showLimitToast('✅ Upvoted!');
-        await loadComments(currentThreadId);
+
+        setPendingForumNav({
+            movieId: currentMovieId,
+            threadId: currentThreadId,
+            commentId,
+            openThreadDetail: true
+        });
     } catch (error) {
         console.error('Error upvoting:', error);
         showLimitToast('❌ Failed to upvote');
+    }
+}
+
+function updateThreadVoteState(threadId, vote, score) {
+    const userUID = localStorage.getItem('userUID');
+    const thread = forumThreads.find(t => t.id === threadId);
+    if (!thread) return;
+
+    thread.score = score;
+    if (!thread.voters) thread.voters = {};
+    if (userUID) thread.voters[String(userUID)] = vote;
+
+    forumThreads.sort((a, b) => (b.score || 0) - (a.score || 0));
+}
+
+function updateThreadDetailVoteUI(threadId, vote, score) {
+    if (currentThreadId !== threadId) return;
+    document.getElementById('threadScore').textContent = score || 0;
+
+    document.querySelectorAll('#threadDetailModal .vote-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`#threadDetailModal .vote-btn.${vote}vote`)?.classList.add('active');
+}
+
+async function translateDynamicText(element) {
+    if (!element || typeof window.translateText !== 'function') return;
+    const userLang = localStorage.getItem('userLanguage') || 'en';
+    if (userLang === 'en') return;
+
+    const originalText = element.getAttribute('data-original-text') || element.textContent;
+    try {
+        const targetLang = window.deepLTranslator
+            ? window.deepLTranslator.normalizeTargetLanguage(userLang)
+            : userLang.toUpperCase();
+        const translated = await window.translateText(originalText, targetLang);
+        element.textContent = translated;
+    } catch (err) {
+        console.error('Dynamic translation failed:', err);
+    }
+}
+
+async function handlePendingForumNav() {
+    const stored = localStorage.getItem('pendingForumNav');
+    if (!stored) return;
+
+    try {
+        pendingForumNav = JSON.parse(stored);
+    } catch (err) {
+        localStorage.removeItem('pendingForumNav');
+        pendingForumNav = null;
+        return;
+    }
+
+    const movie = forumMovies.find(m => String(m.movieId) === String(pendingForumNav.movieId));
+    const movieTitle = movie?.movieTitle || 'Discussion threads';
+
+    await selectMovie(pendingForumNav.movieId, movieTitle);
+
+    if (pendingForumNav.threadId && pendingForumNav.openThreadDetail) {
+        await openThreadDetail(pendingForumNav.threadId);
+        if (!pendingForumNav.commentId) {
+            localStorage.removeItem('pendingForumNav');
+            pendingForumNav = null;
+        }
+        return;
+    }
+
+    if (pendingForumNav.threadId) {
+        scrollToThreadCard(pendingForumNav.threadId);
+        localStorage.removeItem('pendingForumNav');
+        pendingForumNav = null;
+    }
+}
+
+async function scrollToPendingComment(threadId) {
+    if (!pendingForumNav || String(pendingForumNav.threadId) !== String(threadId)) return;
+    if (!pendingForumNav.commentId) return;
+
+    const commentEl = document.getElementById(`comment-${pendingForumNav.commentId}`);
+    if (commentEl) {
+        commentEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    localStorage.removeItem('pendingForumNav');
+    pendingForumNav = null;
+}
+
+function scrollToThreadCard(threadId) {
+    const threadEl = document.getElementById(`thread-${threadId}`);
+    if (threadEl) {
+        threadEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+}
+
+function setPendingForumNav(payload) {
+    try {
+        localStorage.setItem('pendingForumNav', JSON.stringify(payload));
+    } catch (err) {
+        // ignore
     }
 }
 

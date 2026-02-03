@@ -3,13 +3,13 @@
 */
 //
 // 1. GLOBAL CONFIGURATION
-window.YT_API_KEY = 'u';
+window.YT_API_KEY = 'i';
 let currentPlaylist = []; 
 let activeTrailerIdx = -1; 
  
 // 2. GLOBAL TRAILER FETCHER (Used by this file AND mainPageControls.js)
 window.fetchYTId = async function(name) {
-    const API_KEY = 'u'; 
+    const API_KEY = 'i'; 
     try {
         const query = encodeURIComponent(name + " official trailer");
         const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&maxResults=1&type=video&key=${API_KEY}`);
@@ -34,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const formatMoney = (v) => v > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(v) : "N/A";
 
         // FILL UI ELEMENTS
-        if(document.getElementById('posterImg')) document.getElementById('posterImg').src = movie.poster_full_url || '/img/placeholder.jpg';
+        if(document.getElementById('posterImg')) document.getElementById('posterImg').src = movie.poster_full_url || '/img/LOGO_Short.png';
         if(document.getElementById('bgBackdrop')) document.getElementById('bgBackdrop').style.backgroundImage = `url('${movie.poster_full_url}')`;
         
         document.getElementById('title').innerText = movie['Movie Name'] || movie.title || "Unknown";
@@ -46,6 +46,36 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const movieYear = parseInt(String(movie.release_date || movie.Released_Year || "").match(/\d{4}/)?.[0]) || null;
         document.getElementById('year').innerText = movieYear || "----";
+
+        // Track click history locally for recommendations/history rows
+        const prefsKey = 'userPreferences';
+        const prefs = JSON.parse(localStorage.getItem(prefsKey) || '{}');
+        const genreClicks = prefs.genreClicks || {};
+        const clickedMovies = Array.isArray(prefs.clickedMovies) ? prefs.clickedMovies : [];
+
+        if (movie.Genre) {
+            movie.Genre.split(',').map(g => g.trim()).forEach(g => {
+                if (!g) return;
+                genreClicks[g] = (genreClicks[g] || 0) + 1;
+            });
+        }
+
+        if (movieId && !clickedMovies.includes(String(movieId))) {
+            clickedMovies.unshift(String(movieId));
+            if (clickedMovies.length > 20) clickedMovies.length = 20;
+        }
+
+        prefs.genreClicks = genreClicks;
+        prefs.clickedMovies = clickedMovies;
+        localStorage.setItem(prefsKey, JSON.stringify(prefs));
+
+        const recentKey = 'recentMovieClicks';
+        const recent = JSON.parse(localStorage.getItem(recentKey) || '[]');
+        if (movieId && !recent.includes(String(movieId))) {
+            recent.unshift(String(movieId));
+            if (recent.length > 20) recent.length = 20;
+            localStorage.setItem(recentKey, JSON.stringify(recent));
+        }
 
         // DIRECTORS & STARS
         const directors = cleanList(movie.Directors);
@@ -134,7 +164,7 @@ async function initRecommendations(movie, movieYear, firstDirector, starsList) {
 
         container.innerHTML = data.map(m => `
             <div class="mini-card" onclick="window.location.href='movieInfo.html?id=${m.ID}'">
-                <img src="${m.poster_full_url}" onerror="this.src='/img/placeholder.jpg'">
+                <img src="${m.poster_full_url}" onerror="this.src='/img/LOGO_Short.png'">
                 <div class="mini-info">
                     <h4>${m['Movie Name']}</h4>
                     <p>⭐ ${m.Rating || m.imdb_rating} (${m.Votes || 0})</p>

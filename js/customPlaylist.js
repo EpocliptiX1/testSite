@@ -3,8 +3,10 @@ const API_BASE = 'http://localhost:3000';
 
 let activePlaylistId = null;
 let activePlaylistOwnerUID = null;
+let activePlaylistMovieIds = new Set();
 let moviePickerPage = 0;
 const moviePickerLimit = 24;
+let playlistSearchTimeout;
 
 async function fetchJson(path, options) {
     const res = await fetch(`${API_BASE}${path}`, options);
@@ -94,7 +96,7 @@ async function renderPlaylistsGrid() {
         const moviesHTML = (p.movies || []).length > 0 
             ? p.movies.map(m => `
                 <div class="playlist-movie-item">
-                    <img src="${m.poster || '/img/placeholder.jpg'}" alt="${m.movieTitle || 'Movie'}">
+                    <img src="${m.poster || '/img/LOGO_Short.png'}" alt="${m.movieTitle || 'Movie'}">
                     <span>${m.movieTitle || 'Unknown'}</span>
                 </div>
             `).join('')
@@ -216,6 +218,7 @@ async function openPlaylistModal(id) {
     }
     activePlaylistId = pl.id;
     activePlaylistOwnerUID = pl.ownerUID;
+    activePlaylistMovieIds = new Set((pl.movies || []).map(m => String(m.movieId)));
     const titleDisplay = `${pl.name} - ${pl.owner || 'Guest'}`;
     document.getElementById('playlistTitle').innerText = titleDisplay;
     const uidDisplay = (pl.ownerUID !== undefined && pl.ownerUID !== null) ? `UID: ${pl.ownerUID}` : 'UID: Unknown';
@@ -276,7 +279,7 @@ async function openPlaylistModal(id) {
         const title = details?.['Movie Name'] || m.movieTitle || 'Unknown';
         const desc = details?.['Plot'] || 'No description available';
         const rating = details?.['Rating'] || 'N/A';
-        const poster = details?.poster_full_url || m.poster || '/img/placeholder.jpg';
+        const poster = details?.poster_full_url || m.poster || '/img/LOGO_Short.png';
         
         const removeBtnHTML = isOwner ? `
             <button class="btn-remove-from-playlist" data-movie-id="${m.movieId}" title="Remove from playlist">
@@ -476,13 +479,14 @@ async function renderMoviePicker(append = false) {
     if (!movies || movies.length === 0) return;
 
     movies.forEach(movie => {
+        const alreadyAdded = activePlaylistMovieIds.has(String(movie.ID));
         const card = document.createElement('div');
         card.className = 'grid-card';
         card.innerHTML = `
             <img src="${movie.poster_full_url}" onclick="window.location.href='movieInfo.html?id=${movie.ID}'">
             <div class="card-hover-info">
                 <div class="hover-btns">
-                    <button class="hover-add btn-add-to-playlist" data-movie-id="${movie.ID}" data-movie-title="${movie['Movie Name'].replace(/"/g, '&quot;')}" data-movie-genre="${(movie.Genre || '').replace(/"/g, '&quot;')}">Add to List</button>
+                    <button class="hover-add btn-add-to-playlist" data-movie-id="${movie.ID}" data-movie-title="${movie['Movie Name'].replace(/"/g, '&quot;')}" data-movie-genre="${(movie.Genre || '').replace(/"/g, '&quot;')}" ${alreadyAdded ? 'disabled' : ''}>${alreadyAdded ? 'Added' : 'Add to List'}</button>
                 </div>
                 <div class="info-text">
                     <h4>${movie['Movie Name']}</h4>
@@ -502,7 +506,79 @@ async function renderMoviePicker(append = false) {
         const genre = b.dataset.movieGenre || '';
         await addMovieToPlaylist(activePlaylistId, { movieId, movieTitle, poster, genre });
         showToast('Added to playlist');
+        activePlaylistMovieIds.add(String(movieId));
+        b.textContent = 'Added';
+        b.disabled = true;
     });
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+async function searchMoviesForPlaylist() {
+    clearTimeout(playlistSearchTimeout);
+    const query = document.getElementById('playlistSearchInput')?.value.trim();
+    const container = document.getElementById('playlistSearchResults');
+    if (!container) return;
+
+    if (!query || query.length < 2) {
+        container.innerHTML = '';
+        container.classList.remove('active');
+        return;
+    }
+
+    container.classList.add('active');
+    container.innerHTML = '<div class="playlist-search-loading">Searching...</div>';
+
+    playlistSearchTimeout = setTimeout(async () => {
+        try {
+            const movies = await fetchJson(`/search?q=${encodeURIComponent(query)}`);
+            if (!movies || movies.length === 0) {
+                container.innerHTML = '<div class="playlist-search-empty">No movies found</div>';
+                return;
+            }
+
+            container.innerHTML = movies.slice(0, 8).map(movie => {
+                const movieId = String(movie.ID);
+                const exists = activePlaylistMovieIds.has(movieId);
+                return `
+                    <div class="playlist-search-item" data-movie-id="${movieId}" data-movie-title="${escapeHtml(movie['Movie Name'])}" data-movie-poster="${movie.poster_full_url || ''}" data-movie-genre="${escapeHtml(movie.Genre || '')}">
+                        <img src="${movie.poster_full_url || '/img/LOGO_Short.png'}" alt="${escapeHtml(movie['Movie Name'])}" onerror="this.src='/img/LOGO_Short.png'">
+                        <div class="playlist-search-info">
+                            <h5>${escapeHtml(movie['Movie Name'])}</h5>
+                            <p>${movie.Year || 'N/A'} • ${movie.Genre || 'Unknown'} • ⭐ ${movie.Rating || 'N/A'}</p>
+                        </div>
+                        <button class="playlist-search-add" ${exists ? 'disabled' : ''}>${exists ? 'Added' : 'Add'}</button>
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.playlist-search-item').forEach(item => {
+                const button = item.querySelector('.playlist-search-add');
+                if (!button || button.disabled) return;
+                button.onclick = async (e) => {
+                    e.stopPropagation();
+                    if (!activePlaylistId) return;
+                    const movieId = item.dataset.movieId;
+                    const movieTitle = item.dataset.movieTitle || '';
+                    const poster = item.dataset.moviePoster || '';
+                    const genre = item.dataset.movieGenre || '';
+                    await addMovieToPlaylist(activePlaylistId, { movieId, movieTitle, poster, genre });
+                    activePlaylistMovieIds.add(String(movieId));
+                    button.textContent = 'Added';
+                    button.disabled = true;
+                    showToast('Added to playlist');
+                };
+            });
+        } catch (error) {
+            console.error('Playlist search error:', error);
+            container.innerHTML = '<div class="playlist-search-empty">Search failed. Try again.</div>';
+        }
+    }, 300);
 }
 
 // Add current movie to playlist dialog (used on movieInfo page)
@@ -597,18 +673,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const addMoreBtn = document.getElementById('addMoreToPlaylistBtn');
     if (addMoreBtn) addMoreBtn.onclick = async () => {
         moviePickerPage = 0;
-        await renderMoviePicker(false);
+        const grid = document.getElementById('addMoviesGrid');
+        if (grid) {
+            grid.innerHTML = '';
+            grid.style.display = 'none';
+        }
+        const searchInput = document.getElementById('playlistSearchInput');
+        const searchResults = document.getElementById('playlistSearchResults');
+        if (searchInput) searchInput.value = '';
+        if (searchResults) {
+            searchResults.innerHTML = '';
+            searchResults.classList.remove('active');
+        }
+        const loadMoreBtn = document.getElementById('loadMoreMoviesBtn');
+        if (loadMoreBtn) loadMoreBtn.style.display = 'none';
         document.getElementById('addMoviesModal').classList.add('active');
     };
 
     const closeAddMovies = document.getElementById('closeAddMoviesModal');
-    if (closeAddMovies) closeAddMovies.onclick = () => document.getElementById('addMoviesModal').classList.remove('active');
+    if (closeAddMovies) closeAddMovies.onclick = () => {
+        const modal = document.getElementById('addMoviesModal');
+        if (modal) modal.classList.remove('active');
+        const searchInput = document.getElementById('playlistSearchInput');
+        const searchResults = document.getElementById('playlistSearchResults');
+        if (searchInput) searchInput.value = '';
+        if (searchResults) {
+            searchResults.innerHTML = '';
+            searchResults.classList.remove('active');
+        }
+        const grid = document.getElementById('addMoviesGrid');
+        if (grid) {
+            grid.innerHTML = '';
+            grid.style.display = '';
+        }
+        const loadMoreBtn = document.getElementById('loadMoreMoviesBtn');
+        if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+    };
 
     const loadMoreBtn = document.getElementById('loadMoreMoviesBtn');
-    if (loadMoreBtn) loadMoreBtn.onclick = async () => {
-        moviePickerPage++;
-        await renderMoviePicker(true);
-    };
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
 
     renderPlaylistsGrid();
 });

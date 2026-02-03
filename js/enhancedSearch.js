@@ -14,8 +14,18 @@ const EnhancedSearch = {
     // Initialize enhanced search
     init() {
         this.loadSearchHistory();
+        this.ensureResultsPortal();
         this.setupSearchInput();
         console.log('✅ Enhanced search initialized');
+    },
+
+    ensureResultsPortal() {
+        const resultsMenu = document.getElementById('searchResults');
+        if (!resultsMenu) return;
+        if (resultsMenu.parentElement !== document.body) {
+            document.body.appendChild(resultsMenu);
+        }
+        resultsMenu.classList.add('search-results-modal');
     },
     
     // Setup search input with debouncing
@@ -131,9 +141,9 @@ const EnhancedSearch = {
         
         resultsMenu.innerHTML = movies.map(movie => `
             <div class="search-item" onclick="EnhancedSearch.selectMovie('${movie.ID}')">
-                <img src="${movie.Poster || '/img/placeholder.jpg'}" 
+                    <img src="${movie.Poster || '/img/LOGO_Short.png'}" 
                      alt="${movie['Movie Name']}"
-                     onerror="this.src='/img/placeholder.jpg'">
+                        onerror="this.src='/img/LOGO_Short.png'">
                 <div class="search-info">
                     <h5>${this.highlightQuery(movie['Movie Name'], query)}</h5>
                     <p>${movie.Year || 'N/A'} • ${movie.Genre || 'Unknown'} • ⭐ ${movie.Rating || 'N/A'}</p>

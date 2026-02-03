@@ -77,10 +77,13 @@ const KeyboardShortcuts = {
         '?': () => {
             showKeyboardShortcuts();
         },
+        'Shift+/': () => {
+            showShortcutToast();
+        },
         
         // Refresh/Reload
         'r': () => {
-            if (!isInputFocused()) {
+            if (!isInputFocused() && !window.location.pathname.includes('movieInfo.html')) {
                 window.location.reload();
             }
         }
@@ -91,6 +94,12 @@ const KeyboardShortcuts = {
         document.addEventListener('keydown', (e) => {
             // Don't trigger shortcuts when typing in inputs
             if (isInputFocused() && !['Escape', 'Enter'].includes(e.key)) {
+                return;
+            }
+
+            if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
+                e.preventDefault();
+                showShortcutToast();
                 return;
             }
             
@@ -228,6 +237,43 @@ function showKeyboardShortcuts() {
     });
 }
 
+function showShortcutToast() {
+    const existing = document.querySelector('.shortcuts-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.className = 'shortcuts-toast';
+    toast.innerHTML = `
+        <div class="shortcuts-toast-title">Keyboard Shortcuts</div>
+        <ul class="shortcuts-toast-list">
+            <li><span class="shortcut-key">H</span>/<span class="shortcut-key">Home</span> <span>Home</span></li>
+            <li><span class="shortcut-key">M</span> <span>Movies</span></li>
+            <li><span class="shortcut-key">L</span> <span>My List</span></li>
+            <li><span class="shortcut-key">P</span> <span>Playlists</span></li>
+            <li><span class="shortcut-key">/</span> <span>Search</span></li>
+            <li><span class="shortcut-key">Esc</span> <span>Close</span></li>
+            <li><span class="shortcut-key">T</span> <span>Theme</span></li>
+            <li><span class="shortcut-key">Shift+L</span> <span>Language</span></li>
+            <li><span class="shortcut-key">←/→</span> <span>Hero</span></li>
+            <li><span class="shortcut-key">A</span> <span>Account</span></li>
+            <li><span class="shortcut-key">,</span> <span>Settings</span></li>
+            <li><span class="shortcut-key">S</span>/<span class="shortcut-key">Shift+S</span> <span>Sign-in/up</span></li>
+            <li><span class="shortcut-key">?</span> <span>Full list</span></li>
+        </ul>
+    `;
+
+    document.body.appendChild(toast);
+
+    requestAnimationFrame(() => {
+        toast.classList.add('show');
+    });
+
+    setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
 // Styles for shortcuts modal
 const shortcutsStyles = document.createElement('style');
 shortcutsStyles.textContent = `
@@ -328,11 +374,34 @@ shortcutsStyles.textContent = `
 `;
 document.head.appendChild(shortcutsStyles);
 
+function initLeftNavToggle() {
+    const toggle = document.getElementById('leftNavToggle');
+    if (!toggle) return;
+
+    const updateAria = () => {
+        const isCollapsed = document.body.classList.contains('left-nav-collapsed');
+        toggle.setAttribute('aria-expanded', String(!isCollapsed));
+    };
+
+    toggle.addEventListener('click', () => {
+        document.body.classList.toggle('left-nav-collapsed');
+        updateAria();
+    });
+
+    updateAria();
+}
+
 // Initialize on page load
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => KeyboardShortcuts.init());
+    document.addEventListener('DOMContentLoaded', () => {
+        KeyboardShortcuts.init();
+        initLeftNavToggle();
+        initSidebarMenu();
+    });
 } else {
     KeyboardShortcuts.init();
+    initLeftNavToggle();
+    initSidebarMenu();
 }
 
 // Export for use in other scripts
@@ -340,3 +409,39 @@ window.KeyboardShortcuts = KeyboardShortcuts;
 window.showKeyboardShortcuts = showKeyboardShortcuts;
 
 console.log('✅ Keyboard shortcuts loaded');
+
+function initSidebarMenu() {
+    const nav = document.getElementById('navLinks');
+    if (!nav) return;
+
+    let overlay = document.querySelector('.nav-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'nav-overlay';
+        document.body.appendChild(overlay);
+    }
+
+    if (!nav.querySelector('.nav-close-btn')) {
+        const closeItem = document.createElement('li');
+        closeItem.className = 'nav-close-item';
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'nav-close-btn';
+        closeBtn.type = 'button';
+        closeBtn.setAttribute('aria-label', 'Close navigation');
+        closeBtn.innerHTML = '<span>Close menu</span><span>✕</span>';
+        closeBtn.addEventListener('click', () => setNavOpen(false));
+        closeItem.appendChild(closeBtn);
+        nav.prepend(closeItem);
+    }
+
+    overlay.addEventListener('click', () => setNavOpen(false));
+
+    function setNavOpen(isOpen) {
+        nav.classList.toggle('active', isOpen);
+        overlay.classList.toggle('active', isOpen);
+    }
+
+    window.toggleMobileMenu = function() {
+        setNavOpen(!nav.classList.contains('active'));
+    };
+}

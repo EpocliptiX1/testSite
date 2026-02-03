@@ -19,19 +19,22 @@
 <body>
 
     <nav class="navbar">
-        <div class="logo-container">
-            <img src="/img/LOGO.png" alt="Logo" class="logo-img">
-            <img src="/img/LOGO_Short.png" alt="Logo" class="logo-img logo-imgS">
-        </div>
-
         <div class="hamburger" onclick="toggleMobileMenu()">
             <span></span>
             <span></span>
             <span></span>
         </div>
 
+        <div class="logo-container">
+            <a href="/html/indexMain.html" class="logo-link">
+                <img src="/img/LOGO.png" alt="Logo" class="logo-img">
+                <img src="/img/LOGO_Short.png" alt="Logo" class="logo-img logo-imgS">
+            </a>
+        </div>
+
         <ul class="nav-links" id="navLinks">
             <li><a href="/html/indexMain.html" class="myNavLink" data-i18n="nav_home">Home</a></li>
+            <li><a href="/html/indexBrowse.html" class="myNavLink">Browse</a></li>
             <li><a href="/html/allMovies.html" class="myNavLink" data-i18n="nav_movies">Movies</a></li>
             <li><a href="personalList.html" class="myNavLink" data-i18n="nav_mylist">My List</a></li>
             <li><a href="/html/customPlaylists.html" class="myNavLink">Playlists</a></li>
@@ -130,56 +133,121 @@
     </header>
 
     <main class="container" id="subSec" style="padding-bottom: 0;">
-        
-        <!-- Continue Watching Section -->
-        <section class="row" id="continueWatchingSection" style="display: none;">
-            <h2 class="row-title" data-i18n="section_continue_watching">Continue Watching</h2>
-            <div class="horizontal-scroll-row" id="rowContinueWatching"></div>
-        </section>
-        
         <section class="row">
-            <h2 class="row-title" data-i18n="section_top_rated">Top Rated</h2>
-            <div class="horizontal-scroll-row" id="rowTrending">
-                </div>
+            <h2 class="row-title">Most Recent</h2>
+            <div class="horizontal-scroll-row" id="rowNewest"></div>
         </section>
 
-        <section class="promo-section" onclick="openSignupModal()" style="cursor: pointer;">
-            <div class="marquee-track" id="promoMarquee">
+        <section class="intro-section" id="introSection">
+            <div class="intro-grid">
+                <div class="intro-copy">
+                    <h2>Legion Space, built for modern cinema lovers</h2>
+                    <p>
+                        Streamlined discovery, community-curated playlists, and a forum that puts real discussion next to real films.
+                        Legion Space blends premium browsing with a social layer — without the noise.
+                    </p>
+                    <div class="intro-actions">
+                        <a href="/html/indexBrowse.html" class="apply-btn">Explore Full Experience</a>
+                        <a href="/html/allMovies.html" class="apply-btn ghost-btn">Browse Library</a>
+                    </div>
                 </div>
-            <div class="promo-overlay">
-                <div class="promo-title" data-i18n="promo_title">Unlimited Cinema</div>
-                <div class="promo-price">
-                    <span data-i18n="promo_join">Join us for</span> <span class="strike">$5/week</span> <span class="free-text" data-i18n="promo_free">FREE</span>
+                <div class="intro-cards">
+                    <div class="intro-card">
+                        <h4>Curated Playlists</h4>
+                        <p>Public collections built by the community, ranked by votes and enriched with genres.</p>
+                    </div>
+                    <div class="intro-card">
+                        <h4>Forum Threads</h4>
+                        <p>Discuss each movie in dedicated threads and keep the conversation focused.</p>
+                    </div>
+                    <div class="intro-card">
+                        <h4>Personalized Picks</h4>
+                        <p>Recommendations adapt to clicks, genres, and watch behavior over time.</p>
+                    </div>
                 </div>
-                <button class="btn-claim" data-i18n="promo_claim">Claim Offer</button>
-                <p style="color: #aaa; margin-top: 10px; font-size: 0.9rem;" data-i18n="promo_limited">(Launch Offer - Limited Time)</p>
             </div>
         </section>
 
-        
-
-        <section class="row">
-            <h2 class="row-title" data-i18n="section_grossing">Top Grossing Blockbusters (%)</h2>
-            <div class="horizontal-scroll-row" id="rowGrossing"></div>
+        <section class="feature-section" id="featureSection">
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>Community First</h3>
+                    <p>Upvote playlists, comment on threads, and grow a shared movie culture.</p>
+                    <a href="/html/customPlaylists.html" class="feature-link">View Playlists →</a>
+                </div>
+                <div class="feature-card">
+                    <h3>Movie Forum</h3>
+                    <p>Start a thread, ask questions, and keep discussions tied to each film.</p>
+                    <a href="/html/forum.html" class="feature-link">Open Forum →</a>
+                </div>
+                <div class="feature-card">
+                    <h3>Fast Discovery</h3>
+                    <p>Search, filter, and jump into movie details with clean overlays.</p>
+                    <a href="/html/allMovies.html" class="feature-link">Search Movies →</a>
+                </div>
+            </div>
         </section>
 
-        <!-- <section class="row">
-            <h2 class="row-title">New Releases</h2>
-            <div class="horizontal-scroll-row" id="rowNewest"></div>
-        </section> -->
-
-        <section class="row">
-            <h2 class="row-title" data-i18n="section_epic_length">Epic Length Movies</h2>
-            <div class="horizontal-scroll-row" id="rowLongest"></div>
+        <section class="roadmap-section" id="roadmapSection">
+            <div class="roadmap-header">
+                <h2>Roadmap & Future Plans</h2>
+                <p>What’s coming next to make Legion Space even more powerful.</p>
+            </div>
+            <div class="roadmap-grid">
+                <div class="roadmap-card">
+                    <h4>YouTube API Integration</h4>
+                    <p>Official trailer embeds with reliable playback and metadata.</p>
+                    <span class="roadmap-tag reached">Reached</span>
+                </div>
+                <div class="roadmap-card">
+                    <h4>Live Translation (RU/KZ/EN)</h4>
+                    <p>Real-time UI localization across Russian, Kazakh, and English.</p>
+                    <span class="roadmap-tag reached">Reached</span>
+                </div>
+                <div class="roadmap-card">
+                    <h4>Password Encoding</h4>
+                    <p>Credential handling powered by existing encryption utilities. Temporary light encryption</p>
+                    <span class="roadmap-tag reached">Reached</span>
+                </div>
+                <div class="roadmap-card">
+                    <h4>Forum Blocks</h4>
+                    <p>Moderation controls to block users and filter abusive content.</p>
+                    <span class="roadmap-tag reached">Reached</span>
+                </div>
+                <div class="roadmap-card">
+                    <h4>Movie Transcripts</h4>
+                    <p>Accessible transcripts and searchable dialogue.</p>
+                    <span class="roadmap-tag">In Progress</span>
+                </div>
+                <div class="roadmap-card">
+                    <h4>TMDB Global Database</h4>
+                    <p>Expanded metadata and deeper catalog coverage.</p>
+                    <span class="roadmap-tag">Planned</span>
+                </div>
+                <div class="roadmap-card">
+                    <h4>Cloud Sync</h4>
+                    <p>Cross‑device watch history and playlists.</p>
+                    <span class="roadmap-tag">Planned</span>
+                </div>
+            </div>
         </section>
 
+        <section class="cta-strip">
+            <div>
+                <h3>Ready to dive in?</h3>
+                <p>Browse the full experience or jump straight into the library.</p>
+            </div>
+            <div class="cta-actions">
+                <a href="/html/indexBrowse.html" class="apply-btn">Go to Browse</a>
+                <a href="/html/customPlaylists.html" class="apply-btn ghost-btn">Open Public Library</a>
+            </div>
+        </section>
 
         <div id="movieOverlay" class="movie-detail-overlay">
             <div class="overlay-close" onclick="closeMovie()">
                 <img src="/svg/closeX.svg" alt="Close" class="close-icon-svg">
             </div>
             <div class="overlay-wrapper">
-                
                 <div class="overlay-content">
                     <div class="video-max-section">
                         <iframe id="maxTrailer" src="" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>
@@ -192,16 +260,15 @@
                             <span class="stat-label">Released:</span> <span id="statDateOverlay">--</span>
                             <span class="stat-label">Runtime:</span> <span id="statRuntimeOverlay">--</span>
                         </div>
-                        
+
                         <div class="description-block" id="descSection">
                             <h3>Plot Overview</h3>
                             <p id="statPlot">Description...</p>
                         </div>
 
                         <h3>Cast</h3>
-                        <ul class="cast-grid" id="castListOverlay">
-                            </ul>
-                        
+                        <ul class="cast-grid" id="castListOverlay"></ul>
+
                         <div class="watch-on-section">
                             <h3>Watch Now On</h3>
                             <div class="streaming-links">
@@ -230,79 +297,44 @@
             </div>
         </div>
     </main>
-    <!-- <section class="container reviews-section">
-        <div class="row-header">
-            <h2 class="row-title">Community Reviews</h2>
-        </div>
-        <div id="reviewsGrid" class="reviews-grid">
+
+    <section class="container ad-section" id="adSection">
+        <div class="ad-card">
+            <div class="ad-badge">ADVERTISEMENT</div>
+            <div class="ad-content">
+                <div class="ad-text">
+                    <h3>Put your ad here</h3>
+                    <p>Promote a film, event, or brand across Legion Space. Reach cinema lovers with a premium spotlight.</p>
+                </div>
+                <button class="ad-cta">Advertise with us</button>
             </div>
+        </div>
     </section>
 
-    <div id="reviewModal" class="settings-modal-overlay">
-        <div class="settings-content">
-            <span class="close-settings" onclick="closeReviewModal()">&times;</span>
-            <h2>Write a Review</h2>
-            <div class="setting-item">
-                <label>Movie Title</label>
-                <input type="text" id="revMovie" placeholder="Which movie?">
+    <section class="container about-section" id="aboutSection">
+        <div class="about-grid">
+            <div class="about-text">
+                <h2>About Legion Space</h2>
+                <p>
+                    Founded in the heart of Astana, Legion Space Cinema is a recently founded startup oriented towards cinematography. 
+                    our goal is to make cinema accessible to everyone and to provide safe, affordable and secure streaming/research experiences. We currently host a library of over 10,000 movies, ranging from the era of black and white to modern works of art.
+                    Want to witness the magic of accessible and modern experience? Legion Space is your go-to destination for all things film.
+                </p>
             </div>
-            <div class="setting-item">
-                <label>Rating</label>
-                <select id="revStars">
-                    <option value="5">⭐⭐⭐⭐⭐ (Excellent)</option>
-                    <option value="4">⭐⭐⭐⭐ (Great)</option>
-                    <option value="3">⭐⭐⭐ (Average)</option>
-                    <option value="2">⭐⭐ (Bad)</option>
-                    <option value="1">⭐ (Terrible)</option>
-                </select>
-            </div>
-            <div class="setting-item">
-                <label>Your Thoughts</label>
-                <textarea id="revText" placeholder="Write something..." rows="4" style="background:#222; color:white; border:1px solid #444; border-radius:4px; padding:10px;"></textarea>
-            </div>
-            <button class="btn-save" onclick="submitReview()">Post Review</button>
-        </div>
-    </div>     -->
-<section class="container about-section" id="aboutSection">
-    <div class="about-grid">
-        
-        <div class="about-text">
-            <h2>About Legion Space</h2>
-            <p>
-                Founded in the heart of Astana, Legion Space Cinema is a recently founded startup oriented towards cinematography. 
-                our goal is to make cinema accessible to everyone and to provide safe, affordable and secure streaming/research experiences. We currently host a library of over 10,000 movies, ranging from the era of black and white to modern works of art.
-                Want to witness the magic of accessible and modern experience? Legion Space is your go-to destination for all things film.
-            </p>
-        </div>
 
-        <div class="device-support">
-            <h3>Available On</h3>
-            <ul class="device-list">
-                <li>
-                    <span class="device-icon">📱</span>
-                    <span class="device-name">Phone</span>
-                </li>
-                <li>
-                    <span class="device-icon">📟</span>
-                    <span class="device-name">Tablet</span>
-                </li>
-                <li>
-                    <span class="device-icon">💻</span>
-                    <span class="device-name">Laptop</span>
-                </li>
-                <li>
-                    <span class="device-icon">🖥️</span>
-                    <span class="device-name">PC</span>
-                </li>
-                <li>
-                    <span class="device-icon">📺</span>
-                    <span class="device-name">TV</span>
-                </li>
-            </ul>
+            <div class="device-support">
+                <h3>Available On</h3>
+                <ul class="device-list">
+                    <li><span class="device-icon">📱</span><span class="device-name">Phone</span></li>
+                    <li><span class="device-icon">📟</span><span class="device-name">Tablet</span></li>
+                    <li><span class="device-icon">💻</span><span class="device-name">Laptop</span></li>
+                    <li><span class="device-icon">🖥️</span><span class="device-name">PC</span></li>
+                    <li><span class="device-icon">📺</span><span class="device-name">TV</span></li>
+                </ul>
+            </div>
         </div>
-
-    </div>
-</section>
+    </section>
+    
     <div id="notification-toast" class="toast-hidden"></div>
         <footer class="container site-footer">
         <div class="footer-content">
@@ -332,9 +364,9 @@
                     <h4>Browse</h4>
                     <ul>
                         <li><a href="indexMain.html">Home</a></li>
+                        <li><a href="indexBrowse.html">Browse Experience</a></li>
                         <li><a href="allMovies.html">Movies Library</a></li>
                         <li><a href="personalList.html">My List</a></li>
-                        <li><a href="indexMain.html#heroSection">Featured</a></li>
                     </ul>
                 </div>
 
@@ -343,7 +375,7 @@
                     <ul>
                         <li><a href="mailto:legionspacehelpline@gmail.com">Help Center</a></li>
                         <li><a href="mailto:legionspacehelpline@gmail.com">Request a Movie</a></li>
-                        <li><a href="indexMain.html#aboutSection">Supported Devices</a></li>
+                        <li><a href="indexMain.html#introSection">Why Legion Space</a></li>
                         <li><a href="mailto:legionspacehelpline@gmail.com">Contact Us</a></li>
                     </ul>
                 </div>

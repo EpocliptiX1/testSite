@@ -12,6 +12,9 @@ let activeFilters = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('libraryGrid');
+    if (!grid) return;
+
     // 1. Toggle Panel
     const toggleBtn = document.getElementById('filterToggle');
     if (toggleBtn) {
@@ -62,6 +65,10 @@ document.addEventListener('DOMContentLoaded', () => {
 async function loadMovies() {
     isLoading = true;
     const grid = document.getElementById('libraryGrid');
+    if (!grid) {
+        isLoading = false;
+        return;
+    }
 
     // Build URL Params
     const params = new URLSearchParams({
@@ -145,7 +152,13 @@ window.toggleMyList = function(id, name) {
     }
     
     localStorage.setItem('myList', JSON.stringify(list));
-    showToast(message); // make sure showToast is also global  
+    if (typeof showToast === 'function') {
+        showToast(message);
+    } else if (typeof showLimitToast === 'function') {
+        showLimitToast(message);
+    } else {
+        console.log(message);
+    }
     
     // Update the button UI if we are on the info page
     if (typeof updateInfoButtonUI === "function") updateInfoButtonUI(id);

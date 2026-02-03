@@ -1,5 +1,41 @@
 [
   {
+    "movieId": "110",
+    "movieTitle": "Django Unchained",
+    "poster": "https://image.tmdb.org/t/p/w500/7oWY8VDWW7thTzWh3OKYRkWUlD5.jpg",
+    "genre": "Drama, Western",
+    "addedBy": "gbhaBanb",
+    "addedByUID": 2,
+    "createdAt": "2026-02-03T17:40:24.931Z"
+  },
+  {
+    "movieId": "52",
+    "movieTitle": "Terminator 2: Judgment Day",
+    "poster": "https://image.tmdb.org/t/p/w500/jFTVD4XoWQTcg7wdyJKa8PEds5q.jpg",
+    "genre": "Action, Sci-Fi",
+    "addedBy": "user1",
+    "addedByUID": 1,
+    "createdAt": "2026-02-02T17:38:42.840Z"
+  },
+  {
+    "movieId": "696",
+    "movieTitle": "E.T. the Extra-Terrestrial",
+    "poster": "https://image.tmdb.org/t/p/w500/an0nD6uq6byfxXCfk6lQBzdL2J1.jpg",
+    "genre": "Adventure, Family, Sci-Fi",
+    "addedBy": "user1",
+    "addedByUID": 1,
+    "createdAt": "2026-02-02T17:00:11.568Z"
+  },
+  {
+    "movieId": "11",
+    "movieTitle": "The Lord of the Rings: The Return of the King",
+    "poster": "https://image.tmdb.org/t/p/w500/rCzpDGLbOoPwLjy3OAm5NUPOTrC.jpg",
+    "genre": "Action, Adventure, Drama",
+    "addedBy": "user1",
+    "addedByUID": 1,
+    "createdAt": "2026-02-02T16:54:12.366Z"
+  },
+  {
     "movieId": "1",
     "movieTitle": "The Shawshank Redemption",
     "poster": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",

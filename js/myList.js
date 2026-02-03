@@ -3,31 +3,37 @@
     
     if (!user) {
         // Create the UI block immediately
-        const injectLock = () => {
-            const overlay = document.createElement('div');
-            overlay.className = 'locked-overlay';
-            overlay.innerHTML = `
+        const lockMarkup = `
+            <div class="locked-overlay">
                 <div class="locked-box">
                     <div class="lock-icon" style="font-size: 50px; margin-bottom: 20px;">🔒</div>
                     <h2>Private Collection</h2>
                     <p style="display: block;margin-bottom: 10px;">This list is only available to registered members.</p>
                     <a href="indexMain.html#promoMarquee">
                         <button class="btn-locked-signin">Sign In / Join</button>
-                    </a>                    
+                    </a>
                     <br><br>
                     <a href="indexMain.html" style="color: #666; font-size: 13px; text-decoration: none;">← Back to Home</a>
                 </div>
-            `;
-            document.body.appendChild(overlay);
-            document.body.style.overflow = 'hidden';
+            </div>
+        `;
 
-            const wrapper = document.querySelector('.list-wrapper');
-            if (wrapper) wrapper.style.filter = 'blur(20px)';
+        const injectLock = () => {
+            document.body.innerHTML = lockMarkup;
+            document.body.style.overflow = 'hidden';
         };
 
         // If body is ready, inject now. If not, wait for it.
         if (document.body) injectLock();
         else window.addEventListener('DOMContentLoaded', injectLock);
+
+        const keepLocked = () => {
+            if (!document.querySelector('.locked-overlay')) {
+                injectLock();
+            }
+        };
+
+        setInterval(keepLocked, 1000);
         
         // Stop any further execution of this script
         throw new Error("Access Denied: Redirecting to Login UI");
@@ -101,11 +107,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             playlistsGrid.innerHTML = '<p style="color: var(--text-muted); padding: 20px; text-align: center;">No playlists yet. Create one to get started!</p>';
         } else {
             const html = owned.map(p => {
-                const poster = (p.movies && p.movies[0] && p.movies[0].poster) ? p.movies[0].poster : '/img/placeholder.jpg';
+                const poster = (p.movies && p.movies[0] && p.movies[0].poster) ? p.movies[0].poster : '/img/LOGO_Short.png';
                 const count = (p.movies || []).length;
                 return `
                     <div class="playlist-item" onclick="window.location.href='customPlaylists.html'" style="display: flex; gap: 12px; padding: 12px; background: var(--bg-tertiary); border-radius: 8px; cursor: pointer; transition: all 0.3s ease; border: 1px solid var(--border-color);">
-                        <img src="${poster}" onerror="this.src='/img/placeholder.jpg'" style="width: 60px; height: 90px; border-radius: 6px; object-fit: cover;">
+                        <img src="${poster}" onerror="this.src='/img/LOGO_Short.png'" style="width: 60px; height: 90px; border-radius: 6px; object-fit: cover;">
                         <div style="flex: 1; display: flex; flex-direction: column; justify-content: center;">
                             <h4 style="margin: 0 0 5px 0; font-size: 1rem; color: var(--text-primary);">${p.name}</h4>
                             <span style="font-size: 0.85rem; color: var(--text-muted);">${count} movies</span>

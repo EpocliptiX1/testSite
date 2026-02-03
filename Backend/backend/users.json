@@ -11,5 +11,19 @@
       1
     ],
     "userPassword": "$2b$10$d132Vfev6i4IhsbgW4U..ubLQd/pWpIFsxmHyBPTZ1VI2cM8BZHaW"
+  },
+  {
+    "username": "gbhaBanb",
+    "userUID": 2,
+    "userEmail": "dshabayev.192323@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      1,
+      2
+    ],
+    "userPassword": "$2b$10$EIy9P7H6kSVS.GKHQl5dUuCwoG7TFgp6CK5yPgvE8oVkrCkiFli66"
   }
 ]

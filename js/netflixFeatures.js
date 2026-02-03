@@ -287,7 +287,7 @@ const WatchHistoryUI = {
         
         container.innerHTML = items.map(item => `
             <div class="movie-card" onclick="openMovieById('${item.movieId}')">
-                <img src="${item.poster || '/img/placeholder.jpg'}" alt="${item.movieTitle}">
+                <img src="${item.poster || '/img/LOGO_Short.png'}" alt="${item.movieTitle}">
                 <div class="continue-watching-bar">
                     <div class="continue-watching-progress" style="width: ${item.watchedPercentage}%"></div>
                 </div>
@@ -311,7 +311,7 @@ const WatchHistoryUI = {
         
         container.innerHTML = items.map(item => `
             <div class="movie-card" onclick="openMovieById('${item.movieId}')">
-                <img src="${item.poster || '/img/placeholder.jpg'}" alt="${item.movieTitle}">
+                <img src="${item.poster || '/img/LOGO_Short.png'}" alt="${item.movieTitle}">
                 ${item.watchedPercentage >= 95 ? '<div class="watched-indicator">✓ Watched</div>' : ''}
                 <h4>${item.movieTitle}</h4>
                 <p class="year">${new Date(item.lastWatched).toLocaleDateString()}</p>
@@ -338,7 +338,7 @@ const WatchHistoryUI = {
         
         container.innerHTML = movies.map(movie => `
             <div class="movie-card" onclick="openMovieById('${movie.ID}')">
-                <img src="${movie.Poster || '/img/placeholder.jpg'}" alt="${movie['Movie Name']}">
+                <img src="${movie.Poster || '/img/LOGO_Short.png'}" alt="${movie['Movie Name']}">
                 <h4>${movie['Movie Name']}</h4>
                 <p class="year">${movie.Year || 'N/A'} • ⭐ ${movie.Rating || 'N/A'}</p>
             </div>
