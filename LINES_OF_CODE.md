@@ -1,6 +1,6 @@
 # Lines of Code Report - testSite Project
 
-*Last Updated: 2026-02-02*
+*Last Updated: 2026-02-04*
 
 ## Categorization by File Type
 
@@ -11,7 +11,7 @@
 | 778 | `./css/theme-enhancements.css` |
 | 556 | `./css/forum.css` |
 
-### JavaScript Files (Total Lines: 6,248)
+### JavaScript Files (Total Lines: 6,268)
 | Lines | File Path |
 |------:|-----------|
 | 1,640 | `./js/mainPageControls.js` |
@@ -22,7 +22,7 @@
 | 388 | `./js/enhancedSearch.js` |
 | 384 | `./js/netflixFeatures.js` |
 | 342 | `./js/keyboardShortcuts.js` |
-| 304 | `./js/recommendations.js` |
+| 324 | `./js/recommendations.js` |
 | 241 | `./js/deepl-translator.js` |
 | 233 | `./js/myList.js` |
 | 221 | `./js/encryption.js` |
@@ -57,20 +57,20 @@
 
 | Metric | Value |
 |--------|------:|
-| **Total Lines of Code** | **14,814** |
+| **Total Lines of Code** | **14,834** |
 | **Total Script Files** | **27** |
 
 ### By Category
 
 | Category | Lines | Percentage |
 |----------|------:|-----------:|
-| JavaScript Files | 6,248 | 42.2% |
+| JavaScript Files | 6,268 | 42.3% |
 | CSS Files | 5,143 | 34.7% |
 | HTML Files | 2,135 | 14.4% |
 | Backend (Node.js) | 1,168 | 7.9% |
 | Python Scripts | 120 | 0.8% |
 
-> **Note:** The percentages are calculated based on the total lines of code (14,814). All code files including JavaScript, CSS, HTML, Backend, and Python scripts are included in this count.
+> **Note:** The percentages are calculated based on the total lines of code (14,834). All code files including JavaScript, CSS, HTML, Backend, and Python scripts are included in this count.
 
 ### Top 5 Largest Files
 
