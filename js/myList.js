@@ -58,7 +58,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (savedIds.length === 0) return; 
 
     try {
-        const response = await fetch('http://localhost:3000/movies/get-list', {
+        const baseUrl = 'http://localhost:3000/movies/get-list';
+        const requestUrl = window.withMovieSource ? window.withMovieSource(baseUrl) : baseUrl;
+        const response = await fetch(requestUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: savedIds })
@@ -83,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     <div class="info-text">
                         <h4>${movie['Movie Name']}</h4>
-                        <span class="match-score">⭐ ${movie.Rating}</span>
+                        <span class="match-score">IMDb ${movie.Rating}</span>
                     </div>
                 </div>
             </div>

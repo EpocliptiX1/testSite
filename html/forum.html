@@ -11,6 +11,7 @@
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
     <script src="/js/translator.js"></script>
+    <script src="/js/tmdb.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
 </head>
@@ -271,79 +272,86 @@
         </div>
     </div>
         <div id="settingsModal" class="settings-modal-overlay">
-        <div class="settings-content">
-            <span class="close-settings" onclick="closeSettings()">&times;</span>
-            <h2>Settings</h2>
-            <div class="settings-grid">
-                <div class="settings-section">
-                    <h3>Account Details</h3>
-                    <div class="setting-item">
-                        <label>Username</label>
-                        <input type="text" id="settingsUsername" placeholder="Enter new username">
-                    </div>
-                    <div class="setting-item">
-                        <label>Password</label>
-                        <input type="password" id="settingsPassword" placeholder="••••••••">
-                    </div>
-                    <div class="setting-item">
-                        <label>Profile Picture</label>
-                        <div class="large-profile-icon" style="margin-bottom: 10px;"></div>
+            <div class="settings-content">
+                <span class="close-settings" onclick="closeSettings()">&times;</span>
+                <h2>Settings</h2>
+                <div class="settings-grid">
+                    <div class="settings-section">
+                        <h3>Account Details</h3>
+                        <div class="setting-item">
+                            <label>Username</label>
+                            <input type="text" id="settingsUsername" placeholder="Enter new username">
+                        </div>
+                        <div class="setting-item">
+                            <label>Password</label>
+                            <input type="password" id="settingsPassword" placeholder="••••••••">
+                        </div>
+                        <div class="setting-item">
+                            <label>Profile Picture</label>
+                            <div class="large-profile-icon" style="margin-bottom: 10px;"></div>
                         
-                        <button class="btn-small" onclick="document.getElementById('pfpInput').click()">Upload New Image (1MB)</button>
+                            <button class="btn-small" onclick="document.getElementById('pfpInput').click()">Upload New Image (1MB)</button>
                         
-                        <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
+                            <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
+                        </div>
+                        <div class="beta-notice-box">
+                            <div class="beta-badge">BETA v0.9</div>
+                            <p>You are currently using the <strong>Cinematography Preview</strong> build of Legion Space.</p>
+                            <ul>
+                                <li>Experimental 4K Metadata mapping enabled.</li>
+                                <li>Localized database: Astana/Kazakhstan Region.</li>
+                            </ul>
+                            <p class="beta-small">Some settings are read-only during the hackathon phase.</p>
+                        </div>
+                        <div class="setting-item">
+                            <label>Language</label>
+                            <select id="settingsLanguage" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;" onchange="selectLanguage(this.value)">
+                                <option value="en">🇬🇧 English</option>
+                                <option value="ru">🇷🇺 Русский</option>
+                            </select>
+                        </div>                    
+                        <div class="setting-item">
+                            <label>Movie Data Source</label>
+                            <select id="settingsMovieSource" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+                                <option value="local">Local Database</option>
+                                <option value="api">External API (TMDB)</option>
+                            </select>
+                        </div>
                     </div>
-                    <div class="beta-notice-box">
-                        <div class="beta-badge">BETA v0.9</div>
-                        <p>You are currently using the <strong>Cinematography Preview</strong> build of Legion Space.</p>
-                        <ul>
-                            <li>Experimental 4K Metadata mapping enabled.</li>
-                            <li>Localized database: Astana/Kazakhstan Region.</li>
-                        </ul>
-                        <p class="beta-small">Some settings are read-only during the hackathon phase.</p>
-                    </div>
-                    <div class="setting-item">
-                        <label>Language</label>
-                        <select id="settingsLanguage" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;" onchange="selectLanguage(this.value)">
-                            <option value="en">🇬🇧 English</option>
-                            <option value="ru">🇷🇺 Русский</option>
-                        </select>
-                    </div>                    
-                </div>
-                <div class="settings-section">
-                    <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>
+                    <div class="settings-section">
+                        <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>
                     
-                    <div class="setting-item coming-soon">
-                        <label>Custom Themes</label>
-                        <div class="blurred-preview">
-                            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop" alt="Preview">
-                            <div class="blur-overlay"><span>COMING SOON</span></div>
+                        <div class="setting-item coming-soon">
+                            <label>Custom Themes</label>
+                            <div class="blurred-preview">
+                                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop" alt="Preview">
+                                <div class="blur-overlay"><span>COMING SOON</span></div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="setting-item coming-soon" style="margin-top: 15px;">
-                        <label>Cloud Sync (Multi-Device)</label>
-                        <div class="blurred-preview" style="height: 60px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
-                            <span style="font-size: 24px;">☁️</span>
-                            <div class="blur-overlay"><span>PLANNED v2.0</span></div>
+                        <div class="setting-item coming-soon" style="margin-top: 15px;">
+                            <label>Cloud Sync (Multi-Device)</label>
+                            <div class="blurred-preview" style="height: 60px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">☁️</span>
+                                <div class="blur-overlay"><span>PLANNED v2.0</span></div>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="setting-item coming-soon" style="margin-bottom: 0;">
-                        <label>TMDB Global Database</label>
-                        <div class="blurred-preview" style="height: 259px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
-                            <span style="font-size: 24px;">🌐</span>
-                            <div class="blur-overlay"><span>API PENDING</span></div>
+                        <div class="setting-item coming-soon" style="margin-bottom: 0;">
+                            <label>TMDB Global Database</label>
+                            <div class="blurred-preview" style="height: 259px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">🌐</span>
+                                <div class="blur-overlay"><span>API PENDING</span></div>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="settings-footer">
-                <button class="btn-save" onclick="saveSettings()">Save Changes</button>
+                <div class="settings-footer">
+                    <button class="btn-save" onclick="saveSettings()">Save Changes</button>
+                </div>
             </div>
         </div>
-    </div>
         <div id="notification-toast" class="toast-hidden"></div>
 
     <div id="signupModal" class="signup-overlay">
@@ -384,6 +392,17 @@
                     Continue with Google
                 </button>
             </form>
+        </div>
+    </div>
+    <div id="redirectModal" class="confirm-modal-overlay">
+        <div class="confirm-modal-box">
+            <h3>Leaving Legion Space?</h3>
+            <p>You are about to be redirected to the official IMDb page for more details on this title.</p>
+            
+            <div class="confirm-buttons">
+                <button class="btn-confirm" onclick="proceedToIMDb()">Continue to IMDb</button>
+                <button class="btn-cancel" onclick="closeRedirectModal()">Cancel</button>
+            </div>
         </div>
     </div>
     <script src="/js/forum.js"></script>

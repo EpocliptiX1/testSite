@@ -177,7 +177,10 @@ async function generateRecommendations(limit = 12) {
             params.append('year', minYear);
         }
         
-        const response = await fetch(`${API_BASE_URL}/movies/library?${params}`);
+        const baseUrl = `${API_BASE_URL}/movies/library?${params}`;
+        const source = window.getMovieSource ? window.getMovieSource() : 'local';
+        const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+        const response = await fetch(window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl);
         let movies = await response.json();
         
         // Filter out already watched movies
@@ -206,7 +209,10 @@ async function generateRecommendations(limit = 12) {
 // Get top rated movies as fallback
 async function getTopRatedMovies(limit = 12) {
     try {
-        const response = await fetch(`${API_BASE_URL}/movies/library?limit=${limit}&sort=rating_desc`);
+        const baseUrl = `${API_BASE_URL}/movies/library?limit=${limit}&sort=rating_desc`;
+        const source = window.getMovieSource ? window.getMovieSource() : 'local';
+        const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+        const response = await fetch(window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl);
         const movies = await response.json();
         
         // Filter out movies in my list
@@ -253,7 +259,7 @@ async function loadRecommendations() {
                 <img src="${poster}" alt="${escapeForAttribute(title)}" loading="lazy">
                 <div class="movie-overlay">
                     <h4>${escapeHtml(title)}</h4>
-                    <p>${rating} ★</p>
+                    <span class="rating-pill">IMDb ${rating}</span>
                 </div>
             </div>
         `;

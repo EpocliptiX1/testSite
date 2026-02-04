@@ -21,13 +21,19 @@ window.fetchYTId = async function(name) {
 }
 // 3. PAGE INITIALIZATION
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('[MovieInfo] DOMContentLoaded');
     const urlParams = new URLSearchParams(window.location.search);
     const movieId = urlParams.get('id');
+    console.log('[MovieInfo] movieId', movieId);
     if (!movieId) return;
 
     try {
-        const response = await fetch(`http://localhost:3000/movie/${movieId}`);
+        const baseUrl = `http://localhost:3000/movie/${movieId}`;
+        const requestUrl = window.withMovieSource ? window.withMovieSource(baseUrl) : baseUrl;
+        console.log('[MovieInfo] Fetch movie', requestUrl);
+        const response = await fetch(requestUrl);
         const movie = await response.json();
+        console.log('[MovieInfo] Movie loaded', movie);
 
         // HELPERS
         const cleanList = (str) => str ? String(str).replace(/[\[\]']/g, '').split(',').map(s => s.trim()) : [];
@@ -145,7 +151,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupTrailerButton(movie['Movie Name'] || movie.title, movieYear);
 
         // START RECOMMENDATIONS
-        initRecommendations(movie, movieYear, directors[0], stars);
+        const source = window.getMovieSource ? window.getMovieSource() : 'local';
+        console.log('[MovieInfo] source', source);
+        if (source === 'local') {
+            initRecommendations(movie, movieYear, directors[0], stars);
+        } else {
+            initRecommendations(movie, movieYear, directors[0], stars);
+        }
 
     } catch (err) {
         console.error("Initialization Error:", err);
@@ -154,6 +166,40 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 // 4. RECOMMENDATIONS LOGIC
 async function initRecommendations(movie, movieYear, firstDirector, starsList) {
+    const source = window.getMovieSource ? window.getMovieSource() : 'local';
+    const isApi = source === 'api';
+
+    console.log('[Reco] initRecommendations', {
+        source,
+        isApi,
+        movieId: movie.ID,
+        movieYear,
+        firstDirector,
+        starsList
+    });
+
+    const mapTmdbResult = (m) => ({
+        ID: m.id,
+        poster_full_url: m.poster_path ? `${window.TMDB_IMAGE_BASE}${m.poster_path}` : '/img/LOGO_Short.png',
+        'Movie Name': m.title || m.name || 'Unknown',
+        Rating: m.vote_average || 'N/A',
+        Votes: m.vote_count || 0
+    });
+
+    const tmdbFetch = async (path, params = {}) => {
+        const url = window.tmdbBuildUrl ? window.tmdbBuildUrl(path, params) : null;
+        if (!url) return null;
+        console.log('[TMDB] Fetch', path, params);
+        const res = await fetch(url);
+        console.log('[TMDB] Response', path, res.status);
+        if (!res.ok) return null;
+        return res.json();
+    };
+
+    const getCredits = async (movieId) => {
+        return await tmdbFetch(`/movie/${movieId}/credits`, { language: 'en-US' });
+    };
+
     const renderRow = (data, containerId, label) => {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -178,28 +224,72 @@ async function initRecommendations(movie, movieYear, firstDirector, starsList) {
         }
     };
 
-    // Genre Row
-    fetch(`http://localhost:3000/recommend/genre?genre=${encodeURIComponent(movie.Genre)}&exclude=${movie.ID}`)
-        .then(r => r.json()).then(d => renderRow(d, 'genreRow', 'Similar Genre'));
+    let apiCredits = null;
+    if (isApi) {
+        const tmdbMovieId = movie.ID;
+        if (tmdbMovieId) {
+            apiCredits = await getCredits(tmdbMovieId);
+            console.log('[TMDB] Credits', apiCredits);
+            const recData = await tmdbFetch(`/movie/${tmdbMovieId}/recommendations`, { page: 1, language: 'en-US' });
+            const recs = (recData?.results || []).map(mapTmdbResult);
+            console.log('[TMDB] Recommendations count', recs.length);
+            renderRow(recs, 'genreRow', 'Recommended');
+        }
+    } else {
+        // Genre Row
+        fetch(`http://localhost:3000/recommend/genre?genre=${encodeURIComponent(movie.Genre)}&exclude=${movie.ID}`)
+            .then(r => r.json()).then(d => renderRow(d, 'genreRow', 'Similar Genre'));
+    }
 
     // Director Row
     if (firstDirector) {
         const dirTitle = document.getElementById('directorTitle');
-        if(dirTitle) dirTitle.innerText = `More from ${firstDirector}`;
-        fetch(`http://localhost:3000/recommend/director?val=${encodeURIComponent(firstDirector)}&exclude=${movie.ID}`)
-            .then(r => r.json()).then(d => renderRow(d, 'directorRow', `Director: ${firstDirector}`));
+        if (dirTitle) dirTitle.innerText = `More from ${firstDirector}`;
+        if (isApi) {
+            const directorId = apiCredits?.crew?.find(c => c.job === 'Director')?.id || null;
+            console.log('[TMDB] Director ID', directorId, 'for', firstDirector);
+            if (directorId) {
+                const data = await tmdbFetch('/discover/movie', {
+                    with_crew: directorId,
+                    sort_by: 'vote_average.desc',
+                    'vote_count.gte': 100,
+                    'primary_release_date.lte': new Date().toISOString().slice(0, 10),
+                    page: 1
+                });
+                renderRow((data?.results || []).map(mapTmdbResult), 'directorRow', `Director: ${firstDirector}`);
+            }
+        } else {
+            fetch(`http://localhost:3000/recommend/director?val=${encodeURIComponent(firstDirector)}&exclude=${movie.ID}`)
+                .then(r => r.json()).then(d => renderRow(d, 'directorRow', `Director: ${firstDirector}`));
+        }
     }
 
     // Actor Row
     const actorSelect = document.getElementById('actorSelect');
     if (actorSelect && starsList.length > 0) {
+        console.log('[Reco] actorSelect found, starsList length', starsList.length);
         actorSelect.innerHTML = starsList.map(name => `<option value="${name}">${name}</option>`).join('');
         
-        const fetchActorRow = (name) => {
+        const fetchActorRow = async (name) => {
             const actTitle = document.getElementById('actorTitle');
-            if(actTitle) actTitle.innerText = `More from ${name}`;
-            fetch(`http://localhost:3000/recommend/actors?val=${encodeURIComponent(name)}&exclude=${movie.ID}`)
-                .then(r => r.json()).then(d => renderRow(d, 'actorRow', `Starring ${name}`));
+            if (actTitle) actTitle.innerText = `More from ${name}`;
+            if (isApi) {
+                const actorId = apiCredits?.cast?.find(c => c.name === name)?.id || null;
+                console.log('[TMDB] Actor ID', actorId, 'for', name);
+                if (actorId) {
+                    const data = await tmdbFetch('/discover/movie', {
+                        with_cast: actorId,
+                        sort_by: 'vote_average.desc',
+                        'vote_count.gte': 100,
+                        'primary_release_date.lte': new Date().toISOString().slice(0, 10),
+                        page: 1
+                    });
+                    renderRow((data?.results || []).map(mapTmdbResult), 'actorRow', `Starring ${name}`);
+                }
+            } else {
+                fetch(`http://localhost:3000/recommend/actors?val=${encodeURIComponent(name)}&exclude=${movie.ID}`)
+                    .then(r => r.json()).then(d => renderRow(d, 'actorRow', `Starring ${name}`));
+            }
         };
 
         actorSelect.onchange = (e) => fetchActorRow(e.target.value);
@@ -208,12 +298,25 @@ async function initRecommendations(movie, movieYear, firstDirector, starsList) {
 
     // Era Row
     if (movieYear) {
-        fetch(`http://localhost:3000/recommend/timeline?year=${movieYear}&exclude=${encodeURIComponent(movie.ID)}`)
-            .then(r => r.json()).then(d => {
-                const eraTitle = document.getElementById('eraTitle');
-                if(eraTitle) eraTitle.innerHTML = `Movies from ${movieYear - 5} - ${movieYear + 5}`;
-                renderRow(d, 'timelineRow', 'Same Era');
+        if (isApi) {
+            const data = await tmdbFetch('/discover/movie', {
+                'primary_release_date.gte': `${movieYear - 5}-01-01`,
+                'primary_release_date.lte': `${movieYear + 5}-12-31`,
+                sort_by: 'vote_average.desc',
+                'vote_count.gte': 100,
+                page: 1
             });
+            const eraTitle = document.getElementById('eraTitle');
+            if (eraTitle) eraTitle.innerHTML = `Movies from ${movieYear - 5} - ${movieYear + 5}`;
+            renderRow((data?.results || []).map(mapTmdbResult), 'timelineRow', 'Same Era');
+        } else {
+            fetch(`http://localhost:3000/recommend/timeline?year=${movieYear}&exclude=${encodeURIComponent(movie.ID)}`)
+                .then(r => r.json()).then(d => {
+                    const eraTitle = document.getElementById('eraTitle');
+                    if(eraTitle) eraTitle.innerHTML = `Movies from ${movieYear - 5} - ${movieYear + 5}`;
+                    renderRow(d, 'timelineRow', 'Same Era');
+                });
+        }
     }
 }
 

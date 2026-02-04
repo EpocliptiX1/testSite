@@ -14,7 +14,10 @@ async function initHero() {
         }
 
         if (!movies || movies.length === 0) {
-            const response = await fetch('http://localhost:3000/movies/library?limit=5&sort=date_desc');
+            const baseUrl = 'http://localhost:3000/movies/library?limit=5&sort=date_desc';
+            const source = window.getMovieSource ? window.getMovieSource() : 'local';
+            const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+            const response = await fetch(window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl);
             movies = await response.json();
         }
 
@@ -278,7 +281,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (query.length > 0) {
                 resultsMenu.classList.add('active');
                 try {
-                    const response = await fetch(`http://localhost:3000/search?q=${encodeURIComponent(query)}`);
+                    const baseUrl = `http://localhost:3000/search?q=${encodeURIComponent(query)}`;
+                    const response = await fetch(window.withMovieSource ? window.withMovieSource(baseUrl) : baseUrl);
                     const movies = await response.json();
                     renderSearchResults(movies, resultsMenu);
                 } catch (err) {
@@ -341,7 +345,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(display) display.innerText = query;
             
             try {
-                const response = await fetch(`http://localhost:3000/search?q=${encodeURIComponent(query)}`);
+                const baseUrl = `http://localhost:3000/search?q=${encodeURIComponent(query)}`;
+                const response = await fetch(window.withMovieSource ? window.withMovieSource(baseUrl) : baseUrl);
                 const movies = await response.json();
                 
                 // --- GENERATE HTML ---
@@ -362,7 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                         <div class="movie-card-info">
                             <h3>${movie['Movie Name']}</h3>
-                            <p>${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'} • ⭐ ${movie.imdb_rating}</p>
+                            <p>${movie.release_date ? movie.release_date.split('-')[0] : (movie.Year || 'N/A')} • ⭐ ${getMovieRating(movie)}</p>
                         </div>
                     </div>
                 `).join('');
@@ -387,10 +392,18 @@ function renderSearchResults(movies, container) {
             <img src="${movie.poster_full_url}" alt="poster" onerror="this.src='/img/LOGO_Short.png'">
             <div class="search-info">
                 <h5>${movie['Movie Name']}</h5>
-                <p>${movie.release_date ? movie.release_date.split('-')[0] : 'N/A'} • ⭐ ${movie.imdb_rating || 'N/A'} IMDb</p>
+                <p>${movie.release_date ? movie.release_date.split('-')[0] : (movie.Year || 'N/A')} • ⭐ ${getMovieRating(movie)} IMDb</p>
             </div>
         </div>
     `).join('');
+}
+
+function getMovieRating(movie) {
+    if (!movie || typeof movie !== 'object') return 'N/A';
+    const raw = movie.Rating ?? movie.imdb_rating ?? movie.vote_average ?? movie['IMDb Rating'] ?? movie['IMDB Rating'];
+    if (raw === null || raw === undefined || raw === '' || Number.isNaN(Number(raw))) return 'N/A';
+    const num = Number(raw);
+    return Number.isFinite(num) ? num.toFixed(1) : String(raw);
 }
 
 function initSlider() {
@@ -615,7 +628,10 @@ async function fetchRow(containerId, sortType, options = {}) {
         if (actor) params.set('actor', actor);
         if (director) params.set('director', director);
 
-        const res = await fetch(`http://localhost:3000/movies/library?${params.toString()}`);
+        const baseUrl = `http://localhost:3000/movies/library?${params.toString()}`;
+        const source = window.getMovieSource ? window.getMovieSource() : 'local';
+        const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+        const res = await fetch(window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl);
         const movies = await res.json();
 
         container.innerHTML = movies.map(movie => createCard(movie)).join('');
@@ -683,9 +699,11 @@ async function fetchMoviesByIds(ids) {
     if (!Array.isArray(ids) || ids.length === 0) return [];
     const uniqueIds = Array.from(new Set(ids.map(id => String(id))));
 
-    const requests = uniqueIds.map(id =>
-        fetch(`http://localhost:3000/movie/${id}`).then(res => res.ok ? res.json() : null)
-    );
+    const requests = uniqueIds.map(id => {
+        const baseUrl = `http://localhost:3000/movie/${id}`;
+        const requestUrl = window.withMovieSource ? window.withMovieSource(baseUrl) : baseUrl;
+        return fetch(requestUrl).then(res => res.ok ? res.json() : null);
+    });
 
     const results = await Promise.allSettled(requests);
     return results
@@ -844,7 +862,10 @@ async function setupMarquee() {
     if (!marquee) return;
 
     // Fetch random assortment for the background
-    const res = await fetch(`http://localhost:3000/movies/library?limit=20`);
+    const baseUrl = `http://localhost:3000/movies/library?limit=20`;
+    const source = window.getMovieSource ? window.getMovieSource() : 'local';
+    const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+    const res = await fetch(window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl);
     const movies = await res.json();
 
     // Duplicate list for inf to ensure smooth inf loop
@@ -1078,6 +1099,7 @@ window.persistUserStats = function() {
         userUID: parseInt(userUID, 10),
         userEmail: localStorage.getItem('userEmail') || '',
         userTier: localStorage.getItem('userTier') || 'Free',
+        userLanguage: localStorage.getItem('userLanguage') || 'en',
         searchCount: parseInt(localStorage.getItem('searchCount') || '0', 10),
         viewCount: parseInt(localStorage.getItem('viewCount') || '0', 10),
         allUIDs: JSON.parse(localStorage.getItem('allUIDs') || '[]')
@@ -1172,6 +1194,7 @@ window.handleSignIn = async function(e) {
         localStorage.setItem('userUID', String(user.userUID || 0));
         localStorage.setItem('userEmail', user.userEmail || userEmail);
         localStorage.setItem('userTier', user.userTier || 'Free');
+        localStorage.setItem('userLanguage', user.userLanguage || (localStorage.getItem('userLanguage') || 'en'));
         localStorage.setItem('searchCount', String(user.searchCount || 0));
         localStorage.setItem('viewCount', String(user.viewCount || 0));
         localStorage.setItem('allUIDs', JSON.stringify(user.allUIDs || []));
@@ -1358,6 +1381,16 @@ window.openSettings = function() {
     }
 };
 
+window.getMovieSource = function() {
+    return localStorage.getItem('movieSource') || 'local';
+};
+
+window.withMovieSource = function(url) {
+    const source = window.getMovieSource ? window.getMovieSource() : 'local';
+    if (source !== 'api') return url;
+    return `${url}${url.includes('?') ? '&' : '?'}source=api`;
+};
+
 // Load current settings into the modal
 function loadCurrentSettings() {
     // Set theme selection
@@ -1379,6 +1412,11 @@ function loadCurrentSettings() {
     if (settingsLang) {
         const currentLang = localStorage.getItem('userLanguage') || (window.i18n ? window.i18n.getCurrentLanguage() : 'en');
         settingsLang.value = currentLang;
+    }
+
+    const settingsSource = document.getElementById('settingsMovieSource');
+    if (settingsSource) {
+        settingsSource.value = localStorage.getItem('movieSource') || 'local';
     }
     
 }
@@ -1624,6 +1662,13 @@ window.saveSettings = function() {
         localStorage.setItem('userLanguage', settingsLang.value);
     }
 
+    // --- Save Movie Source ---
+    const prevSource = localStorage.getItem('movieSource') || 'local';
+    const settingsSource = document.getElementById('settingsMovieSource');
+    if (settingsSource && settingsSource.value) {
+        localStorage.setItem('movieSource', settingsSource.value);
+    }
+
     // --- 2. Save Password (if have) ---
     // --- 3. CLOSE THE SETTINGS MODAL ---
     const settingsModal = document.getElementById('settingsModal') 
@@ -1631,6 +1676,11 @@ window.saveSettings = function() {
     
     if (settingsModal) {
         settingsModal.classList.remove('active');
+    }
+
+    const nextSource = localStorage.getItem('movieSource') || 'local';
+    if (prevSource !== nextSource && typeof safeReload === 'function') {
+        safeReload();
     }
 
     console.log("Settings Saved & Closed");
@@ -1845,13 +1895,26 @@ function toggleLanguageMenu() {
 }
 
 function selectLanguage(lang) {
+    localStorage.setItem('userLanguage', lang);
     window.i18n.changeLanguage(lang);
     updateLanguageButton(lang);
     if (lang === 'ru') {
         console.log('🔤 Language switched to Russian');
     }
     if (window.translator && typeof window.translator.translatePageAuto === 'function') {
-        window.translator.translatePageAuto();
+        if (lang === 'en') {
+            if (typeof window.translator.resetAll === 'function') {
+                window.translator.resetAll();
+            }
+            if (typeof window.translator.clearCache === 'function') {
+                window.translator.clearCache();
+            }
+            if (typeof window.translator.setTargetLanguage === 'function') {
+                window.translator.setTargetLanguage('EN');
+            }
+        } else {
+            window.translator.translatePageAuto();
+        }
     }
     toggleLanguageMenu();
 }

@@ -10,6 +10,7 @@
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
     <script src="/js/translator.js"></script>
+    <script src="/js/tmdb.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
     <script src="/js/recommendations.js"></script>
@@ -172,6 +173,17 @@
             </form>
         </div>
     </div>
+    <div id="redirectModal" class="confirm-modal-overlay">
+        <div class="confirm-modal-box">
+            <h3>Leaving Legion Space?</h3>
+            <p>You are about to be redirected to the official IMDb page for more details on this title.</p>
+            
+            <div class="confirm-buttons">
+                <button class="btn-confirm" onclick="proceedToIMDb()">Continue to IMDb</button>
+                <button class="btn-cancel" onclick="closeRedirectModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
     <div id="notification-toast" class="toast-hidden"></div>
     <footer class="container site-footer">
         <div class="footer-content">
@@ -258,7 +270,7 @@
                         <label>Profile Picture</label>
                         <div class="large-profile-icon" style="margin-bottom: 10px;"></div>
                         
-                        <button class="btn-small" onclick="document.getElementById('pfpInput').click()">UUpload New Image (1MB)</button>
+                        <button class="btn-small" onclick="document.getElementById('pfpInput').click()">Upload New Image (1MB)</button>
                         
                         <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
                     </div>
@@ -278,6 +290,13 @@
                             <option value="ru">🇷🇺 Русский</option>
                         </select>
                     </div>                    
+                    <div class="setting-item">
+                        <label>Movie Data Source</label>
+                        <select id="settingsMovieSource" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <option value="local">Local Database</option>
+                            <option value="api">External API (TMDB)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="settings-section">
                     <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>

@@ -82,8 +82,12 @@ async function loadMovies() {
     });
 
     try {
-        console.log("Fetching:", `http://localhost:3000/movies/library?${params}`); // DEBUG URL
-        const response = await fetch(`http://localhost:3000/movies/library?${params}`);
+        const baseUrl = `http://localhost:3000/movies/library?${params}`;
+        const source = window.getMovieSource ? window.getMovieSource() : 'local';
+        const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+        const requestUrl = window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl;
+        console.log("Fetching:", requestUrl); // DEBUG URL
+        const response = await fetch(requestUrl);
         
         if (!response.ok) throw new Error("Server Error"); // if server crashes
         
@@ -120,7 +124,7 @@ async function loadMovies() {
 
                     <div class="info-text">
                         <h4>${movie['Movie Name']}</h4>
-                        <span class="match-score">⭐ ${movie.Rating}</span>
+                        <span class="match-score">IMDb ${movie.Rating}</span>
                     </div>
                 </div>
             `;

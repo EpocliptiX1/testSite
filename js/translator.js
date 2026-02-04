@@ -8,15 +8,18 @@ class LiveTranslator {
         this.useBackend = true;
         const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         this.backendEndpoint = isLocal ? 'http://localhost:3000/translate' : '/translate';
+        this.cacheEndpoint = isLocal ? 'http://localhost:3000/translation-cache' : '/translation-cache';
         this.sourceLanguage = 'EN';
         this.targetLanguage = localStorage.getItem('targetLanguage') || 'EN';
         this.cache = {};
         this.isTranslating = false;
         this.translateTimer = null;
         this.mutationObserver = null;
+        this.remoteSaveTimer = null;
         this.persistedCacheKey = 'translationCache_v1';
         this.persistedCacheMax = 500;
         this.loadPersistedCache();
+        this.loadRemoteCache();
     }
 
     loadPersistedCache() {
@@ -39,10 +42,57 @@ class LiveTranslator {
         } catch (err) {
             // ignore quota errors
         }
+        this.scheduleRemoteSave();
     }
 
     getCached(cacheKey) {
         return this.cache[cacheKey] || this.persistedCache?.[cacheKey];
+    }
+
+    clearCache() {
+        this.cache = {};
+        this.persistedCache = {};
+        try {
+            localStorage.removeItem(this.persistedCacheKey);
+        } catch (err) {
+            // ignore
+        }
+        this.saveRemoteCache({});
+    }
+
+    async loadRemoteCache() {
+        try {
+            if (!this.cacheEndpoint) return;
+            const response = await fetch(this.cacheEndpoint);
+            if (!response.ok) return;
+            const data = await response.json();
+            const remoteCache = data?.cache && typeof data.cache === 'object' ? data.cache : {};
+            this.persistedCache = { ...(this.persistedCache || {}), ...remoteCache };
+            this.savePersistedCache();
+        } catch (err) {
+            // ignore fetch errors
+        }
+    }
+
+    scheduleRemoteSave(delayMs = 800) {
+        if (this.remoteSaveTimer) clearTimeout(this.remoteSaveTimer);
+        this.remoteSaveTimer = setTimeout(() => {
+            this.saveRemoteCache(this.persistedCache || {});
+        }, delayMs);
+    }
+
+    async saveRemoteCache(cacheObj) {
+        try {
+            if (!this.cacheEndpoint) return;
+            const payload = { cache: cacheObj || {}, replace: true };
+            await fetch(this.cacheEndpoint, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        } catch (err) {
+            // ignore fetch errors
+        }
     }
 
     setCached(cacheKey, value) {
@@ -328,6 +378,7 @@ class LiveTranslator {
         const target = this.normalizeTargetLanguage(userLang);
         if (target === 'EN') {
             this.resetAll();
+            this.clearCache();
             return;
         }
 
@@ -371,6 +422,8 @@ window.addEventListener('languageChanged', (event) => {
     const targetLang = translator.normalizeTargetLanguage(event.detail.language);
     if (targetLang === 'EN') {
         translator.resetAll();
+        translator.clearCache();
+        translator.setTargetLanguage('EN');
         return;
     }
     translator.setTargetLanguage(targetLang);

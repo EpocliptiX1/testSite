@@ -100,7 +100,8 @@ const EnhancedSearch = {
     // Perform search request
     async performSearch(query) {
         try {
-            const response = await fetch(`http://localhost:3000/search?q=${encodeURIComponent(query)}`);
+            const baseUrl = `http://localhost:3000/search?q=${encodeURIComponent(query)}`;
+            const response = await fetch(window.withMovieSource ? window.withMovieSource(baseUrl) : baseUrl);
             const movies = await response.json();
             
             this.displayResults(movies, query);

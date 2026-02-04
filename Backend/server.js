@@ -18,6 +18,133 @@ const LIBRETRANSLATE_URL = process.env.LIBRETRANSLATE_URL || '';
 const LIBRETRANSLATE_API_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
 const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
 const JWT_EXPIRES_IN = '7d';
+const TMDB_API_KEY = 'f4705f0e34fafba5ccef5cc38a703fc5';
+const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
+const TRANSLATION_CACHE_FILE = path.join(__dirname, 'translation_cache.json');
+
+const TMDB_GENRES = {
+    action: 28,
+    adventure: 12,
+    animation: 16,
+    comedy: 35,
+    crime: 80,
+    documentary: 99,
+    drama: 18,
+    family: 10751,
+    fantasy: 14,
+    history: 36,
+    horror: 27,
+    music: 10402,
+    mystery: 9648,
+    romance: 10749,
+    'science fiction': 878,
+    scifi: 878,
+    'tv movie': 10770,
+    thriller: 53,
+    war: 10752,
+    western: 37
+};
+
+const TMDB_GENRE_NAMES = {
+    28: 'Action',
+    12: 'Adventure',
+    16: 'Animation',
+    35: 'Comedy',
+    80: 'Crime',
+    99: 'Documentary',
+    18: 'Drama',
+    10751: 'Family',
+    14: 'Fantasy',
+    36: 'History',
+    27: 'Horror',
+    10402: 'Music',
+    9648: 'Mystery',
+    10749: 'Romance',
+    878: 'Science Fiction',
+    10770: 'TV Movie',
+    53: 'Thriller',
+    10752: 'War',
+    37: 'Western'
+};
+
+function isTmdbConfigured() {
+    return TMDB_API_KEY && TMDB_API_KEY !== 'YOUR_TMDB_API_KEY';
+}
+
+function loadTranslationCacheFile() {
+    try {
+        if (!fs.existsSync(TRANSLATION_CACHE_FILE)) {
+            return {};
+        }
+        const raw = fs.readFileSync(TRANSLATION_CACHE_FILE, 'utf8');
+        return raw ? JSON.parse(raw) : {};
+    } catch (err) {
+        console.warn('Translation cache read error:', err.message || err);
+        return {};
+    }
+}
+
+function saveTranslationCacheFile(cacheObj) {
+    try {
+        fs.writeFileSync(TRANSLATION_CACHE_FILE, JSON.stringify(cacheObj || {}, null, 2));
+    } catch (err) {
+        console.warn('Translation cache write error:', err.message || err);
+    }
+}
+
+async function tmdbGet(path, params = {}) {
+    if (!isTmdbConfigured()) {
+        throw new Error('TMDB API key is not configured');
+    }
+    const url = `${TMDB_BASE_URL}${path}`;
+    const response = await axios.get(url, {
+        params: {
+            api_key: TMDB_API_KEY,
+            ...params
+        }
+    });
+    return response.data;
+}
+
+function mapTmdbMovie(item) {
+    const genreNames = Array.isArray(item.genre_ids)
+        ? item.genre_ids.map(id => TMDB_GENRE_NAMES[id]).filter(Boolean)
+        : (item.genres || []).map(g => g.name).filter(Boolean);
+
+    const releaseYear = item.release_date ? item.release_date.split('-')[0] : '';
+
+    return {
+        ID: item.id,
+        'Movie Name': item.title || item.name || 'Unknown',
+        title: item.title || item.name || 'Unknown',
+        Year: releaseYear || item.release_date || 'N/A',
+        Released_Year: releaseYear || item.release_date || 'N/A',
+        release_date: item.release_date || '',
+        Rating: item.vote_average ?? 'N/A',
+        Votes: item.vote_count ?? 0,
+        Genre: genreNames.join(', ') || 'N/A',
+        Plot: item.overview || 'No description available.',
+        Overview: item.overview || 'No description available.',
+        poster_full_url: item.poster_path ? `${TMDB_IMAGE_BASE}${item.poster_path}` : '/img/LOGO_Short.png',
+        Poster: item.poster_path ? `${TMDB_IMAGE_BASE}${item.poster_path}` : '/img/LOGO_Short.png',
+        Runtime: item.runtime ? `${item.runtime} min` : undefined,
+        Status: item.status || '',
+        budget: item.budget || 0,
+        revenue: item.revenue || 0
+    };
+}
+
+function mapTmdbMovieWithCredits(item, credits) {
+    const mapped = mapTmdbMovie(item);
+    const directors = (credits?.crew || []).filter(c => c.job === 'Director').map(c => c.name);
+    const cast = (credits?.cast || []).slice(0, 6).map(c => c.name);
+    return {
+        ...mapped,
+        Directors: directors.join(', ') || 'N/A',
+        Stars: cast.join(', ') || 'N/A'
+    };
+}
 
 // --- 1. MIDDLEWARE ---
 app.use(cors());
@@ -156,6 +283,24 @@ app.post('/translate', async (req, res) => {
     }
 });
 
+// --- 1.6 TRANSLATION CACHE PERSISTENCE ---
+app.get('/translation-cache', (req, res) => {
+    const cache = loadTranslationCacheFile();
+    res.json({ cache });
+});
+
+app.post('/translation-cache', (req, res) => {
+    const { cache, replace } = req.body || {};
+    if (!cache || typeof cache !== 'object' || Array.isArray(cache)) {
+        return res.status(400).json({ error: 'cache object required' });
+    }
+
+    const existing = replace ? {} : loadTranslationCacheFile();
+    const merged = { ...existing, ...cache };
+    saveTranslationCacheFile(merged);
+    return res.json({ ok: true, size: Object.keys(merged).length });
+});
+
 
 // --- 2. DATABASE SETUP ---
 // Connect to the SQLite database
@@ -202,15 +347,35 @@ if (!fs.existsSync(forumThreadsPath)) {
 // A. Search by Name (with click count sorting)
 app.get('/search', (req, res) => {
     const query = req.query.q;
+    const source = String(req.query.source || 'local').toLowerCase();
+    if (source === 'api') {
+        tmdbGet('/search/movie', { query, page: 1, include_adult: false })
+            .then(data => {
+                const today = new Date().toISOString().slice(0, 10);
+                const results = (data.results || [])
+                    .filter(m => m.release_date && m.release_date <= today)
+                    .filter(m => (m.vote_count || 0) >= 100)
+                    .filter(m => (m.vote_average || 0) >= 4.5)
+                    .slice(0, 10)
+                    .map(mapTmdbMovie);
+                res.json(results);
+            })
+            .catch(err => {
+                const detail = err.response?.data || err.message;
+                res.status(500).json({ error: 'TMDB search failed', detail });
+            });
+        return;
+    }
     const sql = `
         SELECT m.*, COALESCE(c.click_count, 0) as clicks 
         FROM movies m 
         LEFT JOIN movie_clicks c ON m.ID = c.movie_id 
-        WHERE "Movie Name" LIKE ? 
+        WHERE "Movie Name" LIKE ? AND CAST(SUBSTR(m.release_date, -4) AS INTEGER) <= ?
         ORDER BY clicks DESC, Rating DESC 
         LIMIT 10
     `;
-    db.all(sql, [`%${query}%`], (err, rows) => {
+    const currentYear = new Date().getFullYear();
+    db.all(sql, [`%${query}%`, currentYear], (err, rows) => {
         if (err) return res.status(500).json({ error: err.message });
         res.json(rows);
     });
@@ -219,6 +384,19 @@ app.get('/search', (req, res) => {
 // B. Get Single Movie by ID (with click tracking)
 app.get('/movie/:id', (req, res) => {
     const id = req.params.id;
+    const source = String(req.query.source || 'local').toLowerCase();
+    if (source === 'api') {
+        Promise.all([
+            tmdbGet(`/movie/${id}`, { language: 'en-US' }),
+            tmdbGet(`/movie/${id}/credits`, { language: 'en-US' })
+        ])
+            .then(([data, credits]) => res.json(mapTmdbMovieWithCredits(data, credits)))
+            .catch(err => {
+                const detail = err.response?.data || err.message;
+                res.status(500).json({ error: 'TMDB movie failed', detail });
+            });
+        return;
+    }
     const sql = `
         SELECT m.*, COALESCE(c.click_count, 0) as clicks 
         FROM movies m 
@@ -251,7 +429,7 @@ app.post('/movie/:id/click', (req, res) => {
 });
 
 // D. The "Super" Library Filter (Kept the complex version)
-app.get('/movies/library', (req, res) => {
+app.get('/movies/library', async (req, res) => {
     const limit = parseInt(req.query.limit) || 50;
     const offset = parseInt(req.query.offset) || 0;
     
@@ -261,14 +439,105 @@ app.get('/movies/library', (req, res) => {
     const genre = req.query.genre || '';
     const actor = req.query.actor || '';
     const director = req.query.director || '';
+    const source = String(req.query.source || 'local').toLowerCase();
+    const hydrate = String(req.query.hydrate || '') === '1';
+
+    if (source === 'api') {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const sortMap = {
+                rating_desc: 'vote_average.desc',
+                date_desc: 'primary_release_date.desc',
+                date_new: 'primary_release_date.desc',
+                date_old: 'primary_release_date.asc',
+                duration_desc: 'popularity.desc',
+                success_desc: 'revenue.desc',
+                clicks_desc: 'popularity.desc'
+            };
+
+            const genreKey = String(genre || '').trim().toLowerCase();
+            const genreId = TMDB_GENRES[genreKey];
+
+            const personQuery = (actor || director).trim();
+            let personId = null;
+            if (personQuery) {
+                const personData = await tmdbGet('/search/person', { query: personQuery, page: 1 });
+                personId = personData.results?.[0]?.id || null;
+            }
+
+            const pageSize = 20;
+            const start = Math.max(0, offset);
+            const end = start + Math.min(100, limit);
+            const startPage = Math.floor(start / pageSize) + 1;
+            const endPage = Math.floor((end - 1) / pageSize) + 1;
+
+            const voteCountFloor = sortMode === 'rating_desc' ? 500 : 100;
+            const params = {
+                sort_by: sortMap[sortMode] || 'vote_average.desc',
+                include_adult: false,
+                page: startPage,
+                'primary_release_date.lte': today,
+                'with_runtime.gte': 60,
+                'vote_count.gte': voteCountFloor,
+                'vote_average.gte': 4.5
+            };
+
+            if (minYear) {
+                params['primary_release_date.gte'] = `${minYear}-01-01`;
+            }
+            if (genreId) params.with_genres = genreId;
+            if (personId && actor) params.with_cast = personId;
+            if (personId && director) params.with_crew = personId;
+
+            const pagesToFetch = Math.min(3, endPage - startPage + 1);
+            const pageResults = [];
+            for (let i = 0; i < pagesToFetch; i++) {
+                const page = startPage + i;
+                const data = await tmdbGet('/discover/movie', { ...params, page });
+                pageResults.push(...(data.results || []));
+            }
+
+            const sliced = pageResults
+                .filter(m => m.release_date && m.release_date <= today)
+                .slice(start % pageSize, (start % pageSize) + limit);
+
+            if (!hydrate) {
+                res.json(sliced.map(mapTmdbMovie));
+                return;
+            }
+
+            const hydrated = await Promise.all(sliced.map(async (m) => {
+                try {
+                    const detail = await tmdbGet(`/movie/${m.id}`, { language: 'en-US' });
+                    return detail;
+                } catch {
+                    return m;
+                }
+            }));
+
+            const filtered = hydrated.filter(m => {
+                const releaseDate = m.release_date || '';
+                const runtime = parseInt(String(m.runtime || m.Runtime || '').replace(/\D/g, ''), 10) || 0;
+                const status = m.status || m.Status || '';
+                return releaseDate && releaseDate <= today && runtime >= 60 && status === 'Released';
+            });
+
+            res.json(filtered.map(mapTmdbMovie));
+        } catch (err) {
+            const detail = err.response?.data || err.message;
+            res.status(500).json({ error: 'TMDB library failed', detail });
+        }
+        return;
+    }
 
     // Start building the query - join with click tracking
     let sql = `SELECT m.*, COALESCE(c.click_count, 0) as clicks FROM movies m LEFT JOIN movie_clicks c ON m.ID = c.movie_id WHERE 1=1`;
     let params = [];
 
-    // 1. Filter by Year (Released after X)
-    sql += ` AND CAST(SUBSTR(m.release_date, -4) AS INTEGER) >= ?`;
-    params.push(minYear);
+    const currentYear = new Date().getFullYear();
+    // 1. Filter by Year (Released after X) + exclude future
+    sql += ` AND CAST(SUBSTR(m.release_date, -4) AS INTEGER) >= ? AND CAST(SUBSTR(m.release_date, -4) AS INTEGER) <= ?`;
+    params.push(minYear, currentYear);
 
     // 2. Filter by Genre
     if (genre) {
@@ -289,7 +558,7 @@ app.get('/movies/library', (req, res) => {
     }
 
     // 5. Apply Sorting
-    let orderBy = `CAST(m.Rating AS FLOAT) DESC`; // Default
+    let orderBy = `CAST(m.Rating AS FLOAT) * LOG(CAST(m.Votes AS FLOAT) + 1) DESC`; // Default weighted by votes
 
     if (sortMode === 'date_desc') {
         orderBy = `CAST(SUBSTR(m.release_date, -4) AS INTEGER) DESC`;
@@ -370,7 +639,18 @@ app.get('/recommend/timeline', (req, res) => {
 // =========================================
 app.post('/movies/get-list', (req, res) => {
     const ids = req.body.ids; 
+    const source = String(req.query.source || 'local').toLowerCase();
     if (!ids || ids.length === 0) return res.json([]);
+
+    if (source === 'api') {
+        Promise.all(ids.map(id => tmdbGet(`/movie/${id}`, { language: 'en-US' }).then(mapTmdbMovie).catch(() => null)))
+            .then(results => res.json(results.filter(Boolean)))
+            .catch(err => {
+                const detail = err.response?.data || err.message;
+                res.status(500).json({ error: 'TMDB list failed', detail });
+            });
+        return;
+    }
 
     const placeholders = ids.map(() => '?').join(',');
     const sql = `SELECT * FROM movies WHERE ID IN (${placeholders})`;

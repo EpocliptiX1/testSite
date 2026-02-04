@@ -228,7 +228,12 @@ const SmartRecommendations = {
         
         try {
             const promises = preferences.topGenres.map(genre =>
-                fetch(`${apiBase}/movies/library?genre=${genre}&limit=${Math.ceil(limit / preferences.topGenres.length)}&sort=rating_desc`)
+                (() => {
+                    const baseUrl = `${apiBase}/movies/library?genre=${genre}&limit=${Math.ceil(limit / preferences.topGenres.length)}&sort=rating_desc`;
+                    const source = window.getMovieSource ? window.getMovieSource() : 'local';
+                    const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+                    return fetch(window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl);
+                })()
                     .then(res => res.json())
             );
             
@@ -262,7 +267,10 @@ const SmartRecommendations = {
             : '';
             
         try {
-            const response = await fetch(`${apiBase}/movies/library?limit=${limit}&sort=rating_desc`);
+            const baseUrl = `${apiBase}/movies/library?limit=${limit}&sort=rating_desc`;
+            const source = window.getMovieSource ? window.getMovieSource() : 'local';
+            const hydratedUrl = source === 'api' ? `${baseUrl}&hydrate=1` : baseUrl;
+            const response = await fetch(window.withMovieSource ? window.withMovieSource(hydratedUrl) : hydratedUrl);
             return await response.json();
         } catch (error) {
             console.error('Error getting popular movies:', error);
@@ -349,7 +357,8 @@ const WatchHistoryUI = {
 // Helper function to open movie by ID
 window.openMovieById = async function(movieId) {
     try {
-        const response = await fetch(`http://localhost:3000/movie/${movieId}`);
+        const baseUrl = `http://localhost:3000/movie/${movieId}`;
+        const response = await fetch(window.withMovieSource ? window.withMovieSource(baseUrl) : baseUrl);
         const movie = await response.json();
         
         if (movie) {

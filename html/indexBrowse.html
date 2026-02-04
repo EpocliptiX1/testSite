@@ -11,6 +11,7 @@
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
     <script src="/js/translator.js"></script>
+    <script src="/js/tmdb.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
     <script src="/js/enhancedSearch.js"></script>
@@ -449,9 +450,9 @@
                     <div class="setting-item">
                         <label>Profile Picture</label>
                         <div class="large-profile-icon" style="margin-bottom: 10px;"></div>
-
+                        
                         <button class="btn-small" onclick="document.getElementById('pfpInput').click()">Upload New Image (1MB)</button>
-
+                        
                         <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
                     </div>
                     <div class="beta-notice-box">
@@ -469,11 +470,18 @@
                             <option value="en">🇬🇧 English</option>
                             <option value="ru">🇷🇺 Русский</option>
                         </select>
+                    </div>                    
+                    <div class="setting-item">
+                        <label>Movie Data Source</label>
+                        <select id="settingsMovieSource" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <option value="local">Local Database</option>
+                            <option value="api">External API (TMDB)</option>
+                        </select>
                     </div>
                 </div>
                 <div class="settings-section">
                     <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>
-
+                    
                     <div class="setting-item coming-soon">
                         <label>Custom Themes</label>
                         <div class="blurred-preview">

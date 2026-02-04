@@ -32,7 +32,7 @@
     "userEmail": "ex@gmail.com",
     "userTier": "Free",
     "userLanguage": "en",
-    "searchCount": 0,
+    "searchCount": 1,
     "viewCount": 0,
     "allUIDs": [
       1,
@@ -40,5 +40,21 @@
       3
     ],
     "userPassword": "$2b$10$M1o89D.2Oarov5TLdcBNI.cHmuvux9Mqm/vDqYzGVxelrSoSpZH3y"
+  },
+  {
+    "username": "dwdw",
+    "userUID": 4,
+    "userEmail": "dsh@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "userPassword": "$2b$10$qCCvHNdU7d9jgio4tCrLNuP5iMTR7bD/LNwEghO71CYzRsrFKCL7q"
   }
 ]

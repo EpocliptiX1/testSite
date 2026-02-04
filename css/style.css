@@ -1624,10 +1624,27 @@ body {
 }
 
 .match-score {
-    font-size: 0.9rem;
-    color: #46d369;
-    font-weight: bold;
-    display: block;
+    font-size: 0.8rem;
+    color: #000;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f5c518;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.rating-pill {
+    font-size: 0.8rem;
+    color: #000;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #f5c518;
+    padding: 2px 6px;
+    border-radius: 4px;
 }
 
 .age-rating {

@@ -246,7 +246,11 @@ async function openPlaylistModal(id) {
     // Fetch full details for each movie
     const movieDetailsPromises = (pl.movies || []).map(async m => {
         try {
-            const details = await fetchJson(`/movie/${m.movieId}`);
+            const source = window.getMovieSource ? window.getMovieSource() : 'local';
+            const path = source === 'api'
+                ? `/movie/${m.movieId}?source=api`
+                : `/movie/${m.movieId}`;
+            const details = await fetchJson(path);
             return { ...m, details };
         } catch {
             return m; // fallback if fetch fails
@@ -467,7 +471,9 @@ async function fetchMoviesForPicker() {
         actor: '',
         director: ''
     });
-    return fetchJson(`/movies/library?${params.toString()}`);
+    const source = window.getMovieSource ? window.getMovieSource() : 'local';
+    const suffix = source === 'api' ? '&source=api&hydrate=1' : '';
+    return fetchJson(`/movies/library?${params.toString()}${suffix}`);
 }
 
 async function renderMoviePicker(append = false) {
@@ -490,7 +496,7 @@ async function renderMoviePicker(append = false) {
                 </div>
                 <div class="info-text">
                     <h4>${movie['Movie Name']}</h4>
-                    <span class="match-score">⭐ ${movie.Rating}</span>
+                    <span class="match-score">IMDb ${movie.Rating}</span>
                 </div>
             </div>
         `;

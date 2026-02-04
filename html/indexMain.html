@@ -11,6 +11,7 @@
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
     <script src="/js/translator.js"></script>
+    <script src="/js/tmdb.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
     <script src="/js/enhancedSearch.js"></script>
@@ -494,6 +495,13 @@
                             <option value="ru">🇷🇺 Русский</option>
                         </select>
                     </div>                    
+                    <div class="setting-item">
+                        <label>Movie Data Source</label>
+                        <select id="settingsMovieSource" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+                            <option value="local">Local Database</option>
+                            <option value="api">External API (TMDB)</option>
+                        </select>
+                    </div>
                 </div>
                 <div class="settings-section">
                     <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>
