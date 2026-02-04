@@ -164,7 +164,7 @@ WatchHistory.addEntry(
 
 ### 6. Account Features
 
-**Your credentials are encrypted!**
+**Passwords are securely hashed on the server**
 
 #### Sign Up:
 1. Click "Create Account" in navbar
@@ -172,12 +172,46 @@ WatchHistory.addEntry(
 3. Choose tier (Free/Premium/Gold)
 4. Click "Create Account"
 
-**Your password is encrypted before storage!**
+**Passwords are never stored in the browser.**
 
-#### Encrypted Storage:
-- Email: Encrypted with XOR cipher + Base64
-- Password: Encrypted with salt
-- Auto-fill: Saved credentials auto-populate on sign-in
+#### Secure Storage:
+- Passwords are hashed with bcrypt on the server
+- Client stores only a short-lived auth token
+- No password auto-fill or localStorage password
+
+---
+
+### 7. Live Translation (LibreTranslate, self-hosted)
+
+**Run a free local translator for the hackathon.**
+
+#### Windows (PowerShell)
+1. In a new terminal, run (defaults to EN/RU/KK only):
+   ```powershell
+   python -m pip install libretranslate
+   libretranslate
+   ```
+2. In another terminal, start the backend with:
+   ```powershell
+   $env:LIBRETRANSLATE_URL="http://localhost:5000/translate"
+   node server.js
+   ```
+
+#### macOS/Linux
+1. In a new terminal, run (defaults to EN/RU/KK only):
+   ```bash
+   python3 -m pip install libretranslate
+   libretranslate
+   ```
+2. Optional: override languages
+   ```bash
+   export LIBRETRANSLATE_LOAD_ONLY="en,ru,kk"
+   ```
+2. In another terminal, start the backend with:
+   ```bash
+   export LIBRETRANSLATE_URL="http://localhost:5000/translate"
+   node server.js
+   ```
 
 ---
 

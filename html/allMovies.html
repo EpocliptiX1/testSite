@@ -9,6 +9,7 @@
     <script src="/js/encryption.js"></script>
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
+    <script src="/js/translator.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
 </head>
@@ -275,7 +276,6 @@
                         <select id="settingsLanguage" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;" onchange="selectLanguage(this.value)">
                             <option value="en">🇬🇧 English</option>
                             <option value="ru">🇷🇺 Русский</option>
-                            <option value="kz">🇰🇿 Қазақша</option>
                         </select>
                     </div>
                 </div>
@@ -290,13 +290,6 @@
                             <label for="lowDataMode" class="toggle-slider"></label>
                             <span class="toggle-description">Disables auto-playing trailers to save bandwidth</span>
                         </div>
-                    </div>
-
-                    <!-- DeepL Translation API Key -->
-                    <div class="setting-item">
-                        <label>DeepL API Key (Live Translation)</label>
-                        <input type="password" id="deeplApiKey" placeholder="Enter DeepL API Key">
-                        <small style="color: #888; display: block; margin-top: 5px;">Optional: Enable live translation for content</small>
                     </div>
 
                     <div class="beta-notice-box">

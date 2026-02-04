@@ -10,6 +10,7 @@
     <script src="/js/encryption.js"></script>
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
+    <script src="/js/translator.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
     <script src="/js/enhancedSearch.js"></script>
@@ -200,8 +201,8 @@
                     <span class="roadmap-tag reached">Reached</span>
                 </div>
                 <div class="roadmap-card">
-                    <h4>Live Translation (RU/KZ/EN)</h4>
-                    <p>Real-time UI localization across Russian, Kazakh, and English.</p>
+                    <h4>Live Translation (RU/EN)</h4>
+                    <p>Real-time UI localization across Russian and English.</p>
                     <span class="roadmap-tag reached">Reached</span>
                 </div>
                 <div class="roadmap-card">
@@ -232,14 +233,14 @@
             </div>
         </section>
 
-        <section class="cta-strip">
+        <section class="cta-strip" id="ctaStrip">
             <div>
                 <h3>Ready to dive in?</h3>
                 <p>Browse the full experience or jump straight into the library.</p>
             </div>
             <div class="cta-actions">
-                <a href="/html/indexBrowse.html" class="apply-btn">Go to Browse</a>
-                <a href="/html/customPlaylists.html" class="apply-btn ghost-btn">Open Public Library</a>
+                <a id="ctaPrimaryBtn" href="/html/indexBrowse.html" class="apply-btn">Go to Browse</a>
+                <a id="ctaSecondaryBtn" href="/html/customPlaylists.html" class="apply-btn ghost-btn">Open Public Library</a>
             </div>
         </section>
 
@@ -491,7 +492,6 @@
                         <select id="settingsLanguage" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;" onchange="selectLanguage(this.value)">
                             <option value="en">🇬🇧 English</option>
                             <option value="ru">🇷🇺 Русский</option>
-                            <option value="kz">🇰🇿 Қазақша</option>
                         </select>
                     </div>                    
                 </div>

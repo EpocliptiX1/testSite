@@ -7,12 +7,17 @@ const fetch = require('node-fetch');
 const bcrypt = require('bcrypt');
 const rateLimit = require('express-rate-limit');
 const axios = require('axios');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const YT_API_KEY = 'AIzaSyB6Gco_FfC6l4AH5xLnEU2To8jaUwH2fqak';
 const YOUTUBE_CACHE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 const BCRYPT_SALT_ROUNDS = 10;
-const DEEPL_API_KEY = 'c7911c56-d32c-429a-8d7a-a7f0eeefe76b:fx';
+const GOOGLE_TRANSLATE_API_KEY = process.env.GOOGLE_TRANSLATE_API_KEY || '';
+const LIBRETRANSLATE_URL = process.env.LIBRETRANSLATE_URL || '';
+const LIBRETRANSLATE_API_KEY = process.env.LIBRETRANSLATE_API_KEY || '';
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-secret-change-me';
+const JWT_EXPIRES_IN = '7d';
 
 // --- 1. MIDDLEWARE ---
 app.use(cors());
@@ -43,6 +48,31 @@ app.use((req, res, next) => {
     next();
 });
 
+function signUserToken(user) {
+    return jwt.sign(
+        {
+            userUID: user.userUID,
+            userEmail: user.userEmail,
+            username: user.username,
+            userTier: user.userTier
+        },
+        JWT_SECRET,
+        { expiresIn: JWT_EXPIRES_IN }
+    );
+}
+
+function requireAuth(req, res, next) {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    if (!token) return res.status(401).json({ error: 'Missing auth token' });
+    try {
+        req.user = jwt.verify(token, JWT_SECRET);
+        return next();
+    } catch (err) {
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+}
+
 // --- 1.5 TRANSLATION PROXY ---
 app.post('/translate', async (req, res) => {
     try {
@@ -54,28 +84,75 @@ app.post('/translate', async (req, res) => {
             return res.status(400).json({ error: 'text and target_lang required' });
         }
 
-        const params = new URLSearchParams();
-        filtered.forEach(t => params.append('text', t));
-        params.append('target_lang', String(target_lang).toUpperCase());
-        if (source_lang && String(source_lang).toUpperCase() !== 'AUTO') {
-            params.append('source_lang', String(source_lang).toUpperCase());
+        const target = String(target_lang).toUpperCase();
+        const source = source_lang && String(source_lang).toUpperCase() !== 'AUTO'
+            ? String(source_lang).toUpperCase()
+            : undefined;
+
+        if (LIBRETRANSLATE_URL) {
+            const requestConfig = {
+                headers: { 'Content-Type': 'application/json' }
+            };
+
+            const translateOne = async (inputText) => {
+                try {
+                    const response = await axios.post(
+                        LIBRETRANSLATE_URL,
+                        {
+                            q: inputText,
+                            source: source ? source.toLowerCase() : 'auto',
+                            target: target.toLowerCase(),
+                            format: 'text',
+                            api_key: LIBRETRANSLATE_API_KEY || undefined
+                        },
+                        requestConfig
+                    );
+
+                    if (response.data?.translatedText) {
+                        return response.data.translatedText;
+                    }
+
+                    if (Array.isArray(response.data?.translations) && response.data.translations[0]) {
+                        const candidate = response.data.translations[0].text || response.data.translations[0].translatedText;
+                        return candidate || inputText;
+                    }
+
+                    return inputText;
+                } catch (err) {
+                    const detail = err.response?.data || err.message;
+                    console.warn('LibreTranslate item error:', detail);
+                    return inputText;
+                }
+            };
+
+            const translatedTexts = await Promise.all(filtered.map(translateOne));
+            return res.json({ translations: translatedTexts.map(text => ({ text })) });
         }
 
-        const response = await axios.post(
-            'https://api-free.deepl.com/v2/translate',
-            params,
-            {
-                headers: {
-                    'Authorization': `DeepL-Auth-Key ${DEEPL_API_KEY}`,
-                    'Content-Type': 'application/x-www-form-urlencoded'
+        if (GOOGLE_TRANSLATE_API_KEY) {
+            const response = await axios.post(
+                'https://translation.googleapis.com/language/translate/v2',
+                {
+                    q: filtered,
+                    target: target.toLowerCase(),
+                    source: source ? source.toLowerCase() : undefined,
+                    format: 'text',
+                    key: GOOGLE_TRANSLATE_API_KEY
                 }
-            }
-        );
+            );
 
-        res.json(response.data);
+            const translations = (response.data?.data?.translations || []).map(t => ({
+                text: t.translatedText
+            }));
+
+            return res.json({ translations });
+        }
+
+        return res.status(400).json({ error: 'No translation provider configured' });
     } catch (error) {
-        console.error('DeepL Proxy Error:', error.response?.data || error.message);
-        res.status(500).json({ error: 'Translation failed' });
+        const detail = error.response?.data || error.message;
+        console.error('Translation Proxy Error:', detail);
+        res.status(500).json({ error: 'Translation failed', detail });
     }
 });
 
@@ -436,7 +513,7 @@ if (!fs.existsSync(playlistsPath)) {
 // =========================================
 
 // Save or update user record
-app.post('/users', async (req, res) => {
+app.post('/users', requireAuth, async (req, res) => {
     try {
         const data = fs.readFileSync(usersPath, 'utf8');
         const users = JSON.parse(data) || [];
@@ -445,44 +522,34 @@ app.post('/users', async (req, res) => {
             userUID,
             userEmail,
             userTier,
+            userLanguage,
             searchCount,
             viewCount,
-            allUIDs,
-            userPassword
+            allUIDs
         } = req.body || {};
 
-        if (!username || userUID === undefined || userUID === null) {
-            return res.status(400).json({ error: 'username and userUID required' });
+        const uidNum = parseInt(req.user.userUID, 10);
+        if (!uidNum) return res.status(401).json({ error: 'Invalid token user' });
+
+        if (userUID !== undefined && parseInt(userUID, 10) !== uidNum) {
+            return res.status(403).json({ error: 'Cannot update another user' });
         }
 
-        const uidNum = parseInt(userUID, 10);
         const idx = users.findIndex(u => parseInt(u.userUID, 10) === uidNum);
-        
-        // Hash password if provided and not already hashed
-        let hashedPassword = '';
-        if (userPassword) {
-            // Check if password is already hashed (bcrypt hashes start with $2b$)
-            if (userPassword.startsWith('$2b$')) {
-                hashedPassword = userPassword;
-            } else {
-                hashedPassword = await bcrypt.hash(userPassword, BCRYPT_SALT_ROUNDS);
-            }
-        }
+        if (idx === -1) return res.status(404).json({ error: 'User not found' });
         
         const userRecord = {
-            username,
+            username: username || users[idx].username,
             userUID: uidNum,
-            userEmail: userEmail || '',
-            userTier: userTier || 'Free',
-            userLanguage: userLanguage || (idx !== -1 ? users[idx].userLanguage : 'en'),
+            userEmail: userEmail || users[idx].userEmail || '',
+            userTier: userTier || users[idx].userTier || 'Free',
+            userLanguage: userLanguage || users[idx].userLanguage || 'en',
             searchCount: parseInt(searchCount, 10) || 0,
             viewCount: parseInt(viewCount, 10) || 0,
-            allUIDs: Array.isArray(allUIDs) ? allUIDs : [],
-            userPassword: hashedPassword || (idx !== -1 ? users[idx].userPassword : '')
+            allUIDs: Array.isArray(allUIDs) ? allUIDs : users[idx].allUIDs || []
         };
 
-        if (idx === -1) users.push(userRecord);
-        else users[idx] = { ...users[idx], ...userRecord };
+        users[idx] = { ...users[idx], ...userRecord };
 
         fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
         res.json(userRecord);
@@ -534,7 +601,9 @@ app.post('/users/register', strictLimiter, async (req, res) => {
 
         users.push(userRecord);
         fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
-        res.json(userRecord);
+        const { userPassword: _userPassword, ...safeUser } = userRecord;
+        const token = signUserToken(safeUser);
+        res.json({ token, user: safeUser });
     } catch (err) {
         console.error('Error registering user:', err);
         res.status(500).json({ error: 'Could not register user' });
@@ -563,7 +632,9 @@ app.post('/users/auth', strictLimiter, async (req, res) => {
             return res.status(401).json({ error: 'Invalid credentials' });
         }
 
-        res.json(user);
+        const { userPassword: _userPassword, ...safeUser } = user;
+        const token = signUserToken(safeUser);
+        res.json({ token, user: safeUser });
     } catch (err) {
         console.error('Error authenticating user:', err);
         res.status(500).json({ error: 'Could not authenticate user' });

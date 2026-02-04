@@ -146,6 +146,13 @@ async function updateHero() {
 
         if (content) content.style.opacity = '1';
         updateDots();
+        if (window.translator && typeof window.translator.translateTextNodes === 'function') {
+            const heroSection = document.querySelector('.hero');
+            window.translator.translateTextNodes(heroSection || document.body, {
+                targetLang: window.translator.getTargetLanguage ? window.translator.getTargetLanguage() : undefined,
+                sourceLang: 'EN'
+            });
+        }
     }, 300);
 }
 window.openMovie = async function() {
@@ -949,14 +956,17 @@ function handleSignup(e) {
                 return;
             }
 
-            const user = await res.json();
+            const result = await res.json();
+            const user = result.user || result;
+            if (result.token) {
+                localStorage.setItem('authToken', result.token);
+            }
 
             // SAVE DATA TO LOCAL  
             localStorage.setItem('username', user.username);
             localStorage.setItem('userUID', String(user.userUID));
             localStorage.setItem('userEmail', user.userEmail);
             localStorage.setItem('userTier', user.userTier || tier);
-            localStorage.setItem('password', password);
             localStorage.setItem('allUIDs', JSON.stringify(user.allUIDs || []));
             localStorage.setItem('userLanguage', user.userLanguage || userLanguage);
             
@@ -1070,13 +1080,18 @@ window.persistUserStats = function() {
         userTier: localStorage.getItem('userTier') || 'Free',
         searchCount: parseInt(localStorage.getItem('searchCount') || '0', 10),
         viewCount: parseInt(localStorage.getItem('viewCount') || '0', 10),
-        allUIDs: JSON.parse(localStorage.getItem('allUIDs') || '[]'),
-        userPassword: localStorage.getItem('password') || ''
+        allUIDs: JSON.parse(localStorage.getItem('allUIDs') || '[]')
     };
+
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
 
     fetch('http://localhost:3000/users', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
         body: JSON.stringify(payload)
     }).catch(err => console.error('User stats save error:', err));
 };
@@ -1148,7 +1163,11 @@ window.handleSignIn = async function(e) {
             return;
         }
 
-        const user = await res.json();
+        const result = await res.json();
+        const user = result.user || result;
+        if (result.token) {
+            localStorage.setItem('authToken', result.token);
+        }
         localStorage.setItem('username', user.username || '');
         localStorage.setItem('userUID', String(user.userUID || 0));
         localStorage.setItem('userEmail', user.userEmail || userEmail);
@@ -1156,7 +1175,6 @@ window.handleSignIn = async function(e) {
         localStorage.setItem('searchCount', String(user.searchCount || 0));
         localStorage.setItem('viewCount', String(user.viewCount || 0));
         localStorage.setItem('allUIDs', JSON.stringify(user.allUIDs || []));
-        localStorage.setItem('password', user.userPassword || userPassword);
 
         closeSignInModal();
         safeReload();
@@ -1355,11 +1373,14 @@ function loadCurrentSettings() {
     const lowDataMode = localStorage.getItem('lowDataMode') === 'true';
     const lowDataCheckbox = document.getElementById('lowDataMode');
     if (lowDataCheckbox) lowDataCheckbox.checked = lowDataMode;
+
+    // Set language selection
+    const settingsLang = document.getElementById('settingsLanguage');
+    if (settingsLang) {
+        const currentLang = localStorage.getItem('userLanguage') || (window.i18n ? window.i18n.getCurrentLanguage() : 'en');
+        settingsLang.value = currentLang;
+    }
     
-    // Set DeepL API key
-    const deeplKey = localStorage.getItem('deeplApiKey') || '';
-    const deeplInput = document.getElementById('deeplApiKey');
-    if (deeplInput) deeplInput.value = deeplKey;
 }
 
 window.selectThemeInSettings = function(themeName) {
@@ -1407,7 +1428,6 @@ window.saveSettings = function() {
     const newName = document.getElementById('settingsUsername').value;
     const passInput = document.getElementById('settingsPassword');
     const emailInput = document.getElementById('settingsEmail');
-    const deeplKeyInput = document.getElementById('deeplApiKey');
 
     if (newName.trim() !== "") {
         localStorage.setItem('username', newName);
@@ -1422,20 +1442,10 @@ window.saveSettings = function() {
         console.log("Username updated to:", newName);
     }
 
-    if (passInput && passInput.value.trim() !== "") {
-        localStorage.setItem('password', passInput.value);
-    }
-
     if (emailInput && emailInput.value.trim() !== "") {
         localStorage.setItem('userEmail', emailInput.value);
     }
     
-    // Save DeepL API Key
-    if (deeplKeyInput && deeplKeyInput.value.trim() !== "") {
-        localStorage.setItem('deeplApiKey', deeplKeyInput.value.trim());
-        showLimitToast("🔑 DeepL API key saved!");
-    }
-
     closeSettings();
     if (window.persistUserStats) window.persistUserStats();
     showLimitToast("✅ Settings Saved!");
@@ -1555,7 +1565,43 @@ document.addEventListener('DOMContentLoaded', () => {
     // 3. Load other components if they exist
     if (typeof initHero === 'function') initHero();
     if (typeof loadReviews === 'function') loadReviews();
+    updateCtaForGuest();
 });
+
+function updateCtaForGuest() {
+    const ctaStrip = document.getElementById('ctaStrip');
+    const primaryBtn = document.getElementById('ctaPrimaryBtn');
+    const secondaryBtn = document.getElementById('ctaSecondaryBtn');
+    if (!ctaStrip || !primaryBtn || !secondaryBtn) return;
+
+    const userUID = parseInt(localStorage.getItem('userUID')) || 0;
+    const username = localStorage.getItem('username');
+    const isGuest = !username || username === 'Guest' || userUID === 0;
+
+    if (isGuest) {
+        primaryBtn.textContent = 'Create Account';
+        primaryBtn.setAttribute('href', '#');
+        primaryBtn.onclick = (e) => {
+            e.preventDefault();
+            if (typeof openSignupModal === 'function') openSignupModal();
+        };
+
+        secondaryBtn.textContent = 'Sign In';
+        secondaryBtn.setAttribute('href', '#');
+        secondaryBtn.onclick = (e) => {
+            e.preventDefault();
+            if (typeof openSignInModal === 'function') openSignInModal();
+        };
+    } else {
+        primaryBtn.textContent = 'Go to Browse';
+        primaryBtn.setAttribute('href', '/html/indexBrowse.html');
+        primaryBtn.onclick = null;
+
+        secondaryBtn.textContent = 'Open Public Library';
+        secondaryBtn.setAttribute('href', '/html/customPlaylists.html');
+        secondaryBtn.onclick = null;
+    }
+}
 
 //  ssAVE SETTINGS BUTTON LOGIC
 window.saveSettings = function() {
@@ -1572,12 +1618,13 @@ window.saveSettings = function() {
         }
     }
 
-    // --- 2. Save Password (if have) ---
-    const passInput = document.getElementById('settingsPassword');
-    if (passInput && passInput.value !== "") {
-        localStorage.setItem('password', passInput.value);
+    // --- Save Language ---
+    const settingsLang = document.getElementById('settingsLanguage');
+    if (settingsLang && settingsLang.value) {
+        localStorage.setItem('userLanguage', settingsLang.value);
     }
 
+    // --- 2. Save Password (if have) ---
     // --- 3. CLOSE THE SETTINGS MODAL ---
     const settingsModal = document.getElementById('settingsModal') 
                        || document.querySelector('.settings-modal-overlay.active');
@@ -1800,14 +1847,19 @@ function toggleLanguageMenu() {
 function selectLanguage(lang) {
     window.i18n.changeLanguage(lang);
     updateLanguageButton(lang);
+    if (lang === 'ru') {
+        console.log('🔤 Language switched to Russian');
+    }
+    if (window.translator && typeof window.translator.translatePageAuto === 'function') {
+        window.translator.translatePageAuto();
+    }
     toggleLanguageMenu();
 }
 
 function updateLanguageButton(lang) {
     const flags = {
         'en': { flag: '��🇧', code: 'EN' },
-        'ru': { flag: '🇷🇺', code: 'RU' },
-        'kz': { flag: '🇰🇿', code: 'KZ' }
+        'ru': { flag: '🇷🇺', code: 'RU' }
     };
     
     const currentFlag = document.getElementById('currentFlag');
@@ -1833,6 +1885,10 @@ function updateLanguageButton(lang) {
 window.addEventListener('DOMContentLoaded', () => {
     const currentLang = window.i18n.getCurrentLanguage();
     updateLanguageButton(currentLang);
+    const settingsLang = document.getElementById('settingsLanguage');
+    if (settingsLang) {
+        settingsLang.value = currentLang;
+    }
 });
 
 // Close dropdowns when clicking outside
@@ -1841,86 +1897,6 @@ document.addEventListener('click', (e) => {
         const dropdown = document.getElementById('languageDropdown');
         if (dropdown) {
             dropdown.classList.remove('active');
-        }
-    }
-});
-
-/* =========================================
-   ENHANCED CREDENTIAL MANAGEMENT
-   ========================================= */
-
-// Override the original signup handler to include encryption
-const originalHandleSignup = window.handleSignup;
-window.handleSignup = async function(event) {
-    event.preventDefault();
-    
-    const username = document.getElementById('signupUser').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
-    const tier = document.getElementById('signupTier').value;
-    const userLanguage = localStorage.getItem('userLanguage') || (window.i18n ? window.i18n.getCurrentLanguage() : 'en');
-    
-    if (!username || !email || !password) {
-        showToast('Please fill all fields', 'error');
-        return;
-    }
-    
-    try {
-        // Save credentials encrypted
-        window.crypto_utils.CredentialManager.saveCredentials(email, password);
-        
-        // Continue with original signup logic
-        const response = await fetch('http://localhost:3000/users/register', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                username,
-                userEmail: email,
-                userPassword: password,
-                userTier: tier,
-                userLanguage
-            })
-        });
-        
-        const data = await response.json();
-        
-        if (response.ok) {
-            // Store user data
-            localStorage.setItem('userUID', data.userUID);
-            localStorage.setItem('username', data.username);
-            localStorage.setItem('userEmail', data.userEmail);
-            localStorage.setItem('userTier', data.userTier);
-            localStorage.setItem('searchCount', data.searchCount || 0);
-            localStorage.setItem('viewCount', data.viewCount || 0);
-            localStorage.setItem('userLanguage', data.userLanguage || userLanguage);
-            
-            showToast(window.i18n.t('notif_signup_success'), 'success');
-            closeSignupModal();
-            loadUserProfile();
-        } else {
-            showToast(data.error || window.i18n.t('notif_error'), 'error');
-        }
-    } catch (err) {
-        console.error('Signup error:', err);
-        showToast(window.i18n.t('notif_error'), 'error');
-    }
-};
-
-// Add auto-fill for saved credentials
-window.addEventListener('DOMContentLoaded', () => {
-    const signInModal = document.getElementById('signupModal');
-    if (signInModal && window.crypto_utils.CredentialManager.hasCredentials()) {
-        const credentials = window.crypto_utils.CredentialManager.getCredentials();
-        if (credentials) {
-            const emailField = document.getElementById('signupEmail');
-            const passwordField = document.getElementById('signupPassword');
-            
-            if (emailField && credentials.email) {
-                emailField.value = credentials.email;
-            }
-            if (passwordField && credentials.password) {
-                passwordField.value = credentials.password;
-            }
         }
     }
 });
@@ -1952,17 +1928,6 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(initContinueWatching, 500);
 });
 
-/* =========================================
-   DEEPL AUTO-TRANSLATION BOOTSTRAP
-   ========================================= */
-
-function initDeepLAutoTranslate() {
-    const placeholderKey = 'abcd';
-    localStorage.setItem('deeplApiKey', placeholderKey);
-    const deeplInput = document.getElementById('deeplApiKey');
-    if (deeplInput) deeplInput.value = placeholderKey;
-    return;
-}
 
 function initHeroPreferencesPanel() {
     const isBrowsePage = window.location.pathname.includes('indexBrowse.html');
@@ -2025,8 +1990,6 @@ function initHeroPreferencesPanel() {
         }
     });
 }
-
-window.addEventListener('DOMContentLoaded', initDeepLAutoTranslate);
 
 // Refresh continue watching when user interacts with movies
 window.addEventListener('movieViewed', () => {

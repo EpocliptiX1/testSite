@@ -527,8 +527,7 @@ function changeLanguage(lang) {
     currentLanguage = lang;
     localStorage.setItem('userLanguage', lang);
     
-    // Update all translatable elements
-    updateTranslations();
+    // Static i18n disabled (live translation handles content)
     
     // Emit event for components to react
     window.dispatchEvent(new CustomEvent('languageChanged', { detail: { language: lang } }));
@@ -536,27 +535,12 @@ function changeLanguage(lang) {
 
 // Update all translations on the page
 function updateTranslations() {
-    document.querySelectorAll('[data-i18n]').forEach(element => {
-        const key = element.getAttribute('data-i18n');
-        const translation = t(key);
-        
-        if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-            element.placeholder = translation;
-        } else {
-            element.textContent = translation;
-        }
-    });
-    
-    // Update input placeholders specifically
-    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
-        const key = element.getAttribute('data-i18n-placeholder');
-        element.placeholder = t(key);
-    });
+    // no-op
 }
 
 // Initialize i18n on page load
 document.addEventListener('DOMContentLoaded', () => {
-    updateTranslations();
+    // no-op
 });
 
 // Export for use in other scripts

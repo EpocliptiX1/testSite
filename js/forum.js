@@ -737,8 +737,8 @@ async function translateDynamicText(element) {
 
     const originalText = element.getAttribute('data-original-text') || element.textContent;
     try {
-        const targetLang = window.deepLTranslator
-            ? window.deepLTranslator.normalizeTargetLanguage(userLang)
+        const targetLang = window.translator
+            ? window.translator.normalizeTargetLanguage(userLang)
             : userLang.toUpperCase();
         const translated = await window.translateText(originalText, targetLang);
         element.textContent = translated;
