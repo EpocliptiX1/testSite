@@ -10,8 +10,8 @@
   },
   {
     "user": "aaaaaaaaaaaaaa",
-    "pfp": null,
-    "movieTitle": "12 Angry Men",
+      "review": "This is an amazing product!",
+      "rating": 4
     "movieId": "389",
     "stars": 5,
     "text": "dwwd",
