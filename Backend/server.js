@@ -1,4 +1,3 @@
-// ...existing code...
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -367,11 +366,29 @@ app.post('/translation-cache', (req, res) => {
 
 
 // --- 2. DATABASE SETUP ---
-// Connect to the SQLite database
+// Connect to the SQLite databases
 const dbPath = path.join(__dirname, '..', 'datasets', 'movies.db');
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) console.error("Database error:", err.message);
     else console.log("✅ Connected to movies database");
+});
+
+const usersDbPath = path.join(__dirname, 'users.db');
+const usersDb = new sqlite3.Database(usersDbPath, (err) => {
+    if (err) console.error("Users DB error:", err.message);
+    else console.log("✅ Connected to users database");
+    // Ensure users table exists
+    usersDb.run(`CREATE TABLE IF NOT EXISTS users (
+        userUID INTEGER PRIMARY KEY,
+        username TEXT,
+        userEmail TEXT UNIQUE,
+        userTier TEXT,
+        userLanguage TEXT,
+        searchCount INTEGER,
+        viewCount INTEGER,
+        allUIDs TEXT,
+        userPassword TEXT
+    )`);
 });
 
 // --- 3. REVIEWS FILE SETUP ---
@@ -940,49 +957,48 @@ app.post('/users', requireAuth, async (req, res) => {
 // Register new user (assign unique UID, prevent email duplicates)
 app.post('/users/register', strictLimiter, async (req, res) => {
     try {
-        const data = fs.readFileSync(usersPath, 'utf8');
-        const users = JSON.parse(data) || [];
-        const {
-            username,
-            userEmail,
-            userTier,
-            userPassword,
-            userLanguage
-        } = req.body || {};
-
+        const { username, userEmail, userTier, userPassword, userLanguage } = req.body || {};
         if (!username || !userEmail || !userPassword) {
             return res.status(400).json({ error: 'username, email, and password required' });
         }
-
-        const existing = users.find(u => String(u.userEmail).toLowerCase() === String(userEmail).toLowerCase());
-        if (existing) {
-            return res.status(409).json({ error: 'Email already registered' });
-        }
-
-        const maxUID = users.reduce((max, u) => Math.max(max, parseInt(u.userUID, 10) || 0), 0);
-        const newUID = maxUID + 1;
-
-        // Hash the password before storing
-        const hashedPassword = await bcrypt.hash(userPassword, BCRYPT_SALT_ROUNDS);
-
-        const userRecord = {
-            username,
-            userUID: newUID,
-            userEmail,
-            userTier: userTier || 'Free',
-            userLanguage: userLanguage || 'en',
-            searchCount: 0,
-            viewCount: 0,
-            allUIDs: users.map(u => parseInt(u.userUID, 10)).filter(n => !Number.isNaN(n)).concat(newUID),
-            userPassword: hashedPassword
-        };
-
-        users.push(userRecord);
-        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
-        const { userPassword: _userPassword, ...safeUser } = userRecord;
-        safeUser.isAdmin = isAdminUser(userRecord);
-        const token = signUserToken(safeUser);
-        res.json({ token, user: safeUser });
+        usersDb.get('SELECT * FROM users WHERE userEmail = ?', [userEmail], async (err, row) => {
+            if (row) return res.status(409).json({ error: 'Email already registered' });
+            usersDb.get('SELECT MAX(userUID) as maxUID FROM users', async (err2, row2) => {
+                const newUID = (row2 && row2.maxUID ? row2.maxUID : 1) + 1;
+                const hashedPassword = await bcrypt.hash(userPassword, BCRYPT_SALT_ROUNDS);
+                const userRecord = {
+                    username,
+                    userUID: newUID,
+                    userEmail,
+                    userTier: userTier || 'Free',
+                    userLanguage: userLanguage || 'en',
+                    searchCount: 0,
+                    viewCount: 0,
+                    allUIDs: [newUID],
+                    userPassword: hashedPassword
+                };
+                // Save to SQLite
+                usersDb.run(`INSERT INTO users (userUID, username, userEmail, userTier, userLanguage, searchCount, viewCount, allUIDs, userPassword) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [userRecord.userUID, userRecord.username, userRecord.userEmail, userRecord.userTier, userRecord.userLanguage, userRecord.searchCount, userRecord.viewCount, JSON.stringify(userRecord.allUIDs), userRecord.userPassword],
+                    function (err3) {
+                        if (err3) return res.status(500).json({ error: 'Could not register user' });
+                        // Save to users.json as well
+                        let users = [];
+                        try {
+                            if (fs.existsSync(usersPath)) {
+                                users = JSON.parse(fs.readFileSync(usersPath, 'utf8')) || [];
+                            }
+                        } catch (e) { users = []; }
+                        users.push({ ...userRecord, allUIDs: userRecord.allUIDs });
+                        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+                        const { userPassword: _userPassword, ...safeUser } = userRecord;
+                        safeUser.isAdmin = isAdminUser(userRecord);
+                        const token = signUserToken(safeUser);
+                        res.json({ token, user: safeUser });
+                    }
+                );
+            });
+        });
     } catch (err) {
         console.error('Error registering user:', err);
         res.status(500).json({ error: 'Could not register user' });
@@ -996,25 +1012,15 @@ app.post('/users/auth', strictLimiter, async (req, res) => {
         if (!userEmail || !userPassword) {
             return res.status(400).json({ error: 'Email and password required' });
         }
-
-        const data = fs.readFileSync(usersPath, 'utf8');
-        const users = JSON.parse(data) || [];
-        const user = users.find(u =>
-            String(u.userEmail).toLowerCase() === String(userEmail).toLowerCase()
-        );
-
-        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
-        
-        // Compare password with bcrypt
-        const passwordMatch = await bcrypt.compare(userPassword, user.userPassword);
-        if (!passwordMatch) {
-            return res.status(401).json({ error: 'Invalid credentials' });
-        }
-
-        const { userPassword: _userPassword, ...safeUser } = user;
-        safeUser.isAdmin = isAdminUser(user);
-        const token = signUserToken(safeUser);
-        res.json({ token, user: safeUser });
+        usersDb.get('SELECT * FROM users WHERE userEmail = ?', [userEmail], async (err, user) => {
+            if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+            const passwordMatch = await bcrypt.compare(userPassword, user.userPassword);
+            if (!passwordMatch) return res.status(401).json({ error: 'Invalid credentials' });
+            const { userPassword: _userPassword, ...safeUser } = user;
+            safeUser.isAdmin = isAdminUser(user);
+            const token = signUserToken(safeUser);
+            res.json({ token, user: safeUser });
+        });
     } catch (err) {
         console.error('Error authenticating user:', err);
         res.status(500).json({ error: 'Could not authenticate user' });

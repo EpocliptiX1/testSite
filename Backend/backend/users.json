@@ -1,63 +1,5 @@
 [
   {
-    "username": "user1",
-    "userUID": 1,
-    "userEmail": "dshabayev.19@gmail.com",
-    "userTier": "Free",
-    "userLanguage": "en",
-    "searchCount": 0,
-    "viewCount": 0,
-    "allUIDs": [
-      1
-    ],
-    "userPassword": "$2b$10$d132Vfev6i4IhsbgW4U..ubLQd/pWpIFsxmHyBPTZ1VI2cM8BZHaW"
-  },
-  {
-    "username": "gbhaBanb",
-    "userUID": 2,
-    "userEmail": "dshabayev.192323@gmail.com",
-    "userTier": "Free",
-    "userLanguage": "en",
-    "searchCount": 0,
-    "viewCount": 0,
-    "allUIDs": [
-      1,
-      2
-    ],
-    "userPassword": "$2b$10$EIy9P7H6kSVS.GKHQl5dUuCwoG7TFgp6CK5yPgvE8oVkrCkiFli66"
-  },
-  {
-    "username": "tantaya",
-    "userUID": 3,
-    "userEmail": "ex@gmail.com",
-    "userTier": "Free",
-    "userLanguage": "en",
-    "searchCount": 2,
-    "viewCount": 1,
-    "allUIDs": [
-      1,
-      2,
-      3
-    ],
-    "userPassword": "$2b$10$M1o89D.2Oarov5TLdcBNI.cHmuvux9Mqm/vDqYzGVxelrSoSpZH3y"
-  },
-  {
-    "username": "dwdw",
-    "userUID": 4,
-    "userEmail": "dsh@gmail.com",
-    "userTier": "Free",
-    "userLanguage": "en",
-    "searchCount": 0,
-    "viewCount": 0,
-    "allUIDs": [
-      1,
-      2,
-      3,
-      4
-    ],
-    "userPassword": "$2b$10$qCCvHNdU7d9jgio4tCrLNuP5iMTR7bD/LNwEghO71CYzRsrFKCL7q"
-  },
-  {
     "username": "admin",
     "userUID": 5,
     "userEmail": "LegionCinemaAdmin@gmail.com",
@@ -75,40 +17,191 @@
     "userPassword": "$2b$10$cNEPvsPkiIiwzSqw1A.qEutpmYK..DtbImPv.xz/VOMzMNMN/xf3a"
   },
   {
-    "username": "aaaaaaaaaaaaaa",
+    "username": "Damir",
     "userUID": 6,
-    "userEmail": "EEEEEEEEEEEEEEEEEEEEEEEEEEEE@gmail.com",
+    "userEmail": "dshabayev.19@gmail.com",
     "userTier": "Free",
     "userLanguage": "en",
     "searchCount": 0,
     "viewCount": 0,
     "allUIDs": [
-      1,
-      2,
-      3,
-      4,
       5,
       6
     ],
-    "userPassword": "$2b$10$zmyYEGEF5FomgQq6BHs3ju0DrgfRyTXSlUfDGkWJmrAuZtaX4lpy6"
+    "userPassword": "$2b$10$Ph9woXKo1bVfnRPNJ7LwseTkZl0z/1twp9EPD3awRF1piBB55Cp6q"
   },
   {
-    "username": "idk",
+    "username": "Dawmir",
     "userUID": 7,
-    "userEmail": "idk@gmail.com",
+    "userEmail": "dshabayev.139@gmail.com",
     "userTier": "Free",
     "userLanguage": "en",
-    "searchCount": 1,
+    "searchCount": 0,
     "viewCount": 0,
     "allUIDs": [
-      1,
-      2,
-      3,
-      4,
       5,
       6,
       7
     ],
-    "userPassword": "$2b$10$IzQk6Hy9vCR3zxlbWhsLj.LlOI/sy6NNEkSM7IqgewxN/.EMr7Vw2"
+    "userPassword": "$2b$10$9WZQob0loX8PBx16rPMXie5GeQzEMpP/RIuXTYfF/MxSWPaOSUk6K"
+  },
+  {
+    "username": "454",
+    "userUID": 8,
+    "userEmail": "dshabayev.1903@gmail.com454545",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      5,
+      6,
+      7,
+      8
+    ],
+    "userPassword": "$2b$10$nTqWx.M87jjUram0ZuF9nOTIQeaR2tElRuPwxBTJdTPsM3bm2PC5S"
+  },
+  {
+    "username": "erf",
+    "userUID": 9,
+    "userEmail": "dshabayevfefefeeffe.19@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "userPassword": "$2b$10$WIhaTIbrNFt5fF23wzqUs.NyUHF2U/pdBdt/sfHvLC11.CHXqWt7i"
+  },
+  {
+    "username": "Dawmirdd",
+    "userUID": 10,
+    "userEmail": "dshabayev.19@gmail.coms",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "userPassword": "$2b$10$VhIfCoePJFxSqClsWBr.rOFm4V5kBupdq9Iy/xtdavVvMb1KC2IIC"
+  },
+  {
+    "username": "dshabayev.19@gmail.comdshabayev.19@gmail.com",
+    "userUID": 11,
+    "userEmail": "dshabayev.19@gmddwsdail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11
+    ],
+    "userPassword": "$2b$10$/KgSwJ5Um0YISnMFm2K1TelDh7cOrKM3ZAE5fu4QOIqavWR7LYcN."
+  },
+  {
+    "username": "dshabayev.19@gmsail.comdshabayev.19@gmail.com",
+    "userUID": 12,
+    "userEmail": "dshabayev.1dwwddwdw9@dgmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "userPassword": "$2b$10$H4EkDqZyLVUrpjdmTH1LeeXGggyGcvQZzatL7Vj9g2jyFcY6cwNES"
+  },
+  {
+    "username": "Damirsvv",
+    "userUID": 13,
+    "userEmail": "dshabayev.dwdwddwdwdw19@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13
+    ],
+    "userPassword": "$2b$10$tGQVKLOfByDIDXekqzkCbe0lJdim12XBWNKDh6S0HTtJxaXy1azJW"
+  },
+  {
+    "username": "dshabayev.19dwwddwdwda@gmail.comdshabayev.19@gmail.com",
+    "userUID": 14,
+    "userEmail": "ddshabayev.19@gmail.comd",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "userPassword": "$2b$10$sMGI7JfcRp5NvCo5KIZedu1nnp7pNrkMJ1esxElEO85NV7TsEUdNi"
+  },
+  {
+    "username": "dwdedwwdwewds",
+    "userUID": 2,
+    "userEmail": "dshabdddwdwdayev.19@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      2
+    ],
+    "userPassword": "$2b$10$53f/PloUc8bPHjbwuw6YEuGXhA61CDMZZuVluWzG8jNNRaWkJAjMW"
+  },
+  {
+    "username": "Damirsddwddwdewdwdwesd",
+    "userUID": 3,
+    "userEmail": "dshabayev.19dwdwdwdwd@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      3
+    ],
+    "userPassword": "$2b$10$uEAxUdjqgw0WTJp5BI54ee0d99/BhsNtWDzSpYLTExeyFpjkIYIki"
   }
 ]
