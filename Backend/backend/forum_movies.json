@@ -1,3 +1,11 @@
 [
-
+  {
+    "movieId": "1",
+    "movieTitle": "The Shawshank Redemption",
+    "poster": "https://image.tmdb.org/t/p/w500/9cqNxx0GxF0bflZmeSMuL5tnGzr.jpg",
+    "genre": "Drama",
+    "addedBy": "tantaya",
+    "addedByUID": 3,
+    "createdAt": "2026-02-05T09:45:49.548Z"
+  }
 ]

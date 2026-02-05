@@ -162,8 +162,10 @@
 
     <div id="reviewModal" class="settings-modal-overlay">
         <div class="settings-content">
-            <span class="close-settings" onclick="closeReviewModal()">&times;</span>
-            <h2>Write a Review</h2>
+            <div class="review-modal-header">
+                <h2>Write a Review</h2>
+                <span class="close-settings" onclick="closeReviewModal()">&times;</span>
+            </div>
             <div class="setting-item">
                 <label>Movie Title</label>
                 <input type="text" id="revMovie" placeholder="Which movie?" readonly>
@@ -201,6 +203,26 @@
         </div>
     </div>
     <div id="notification-toast" class="toast-hidden"></div>
+    <section class="container forum-cta-bar" id="forumCtaBar" style="display: none;">
+        <div class="forum-cta-text">
+            <h3>Join the Forum Discussion</h3>
+            <p>See threads and share thoughts about this movie.</p>
+        </div>
+        <button class="forum-cta-action" onclick="openForumRedirectModal()">Open Forum</button>
+    </section>
+    <section class="container ad-section" id="adSection" style="padding: 60px 20px 20px;">
+        <div class="ad-card">
+            <div class="ad-badge">ADVERTISEMENT</div>
+            <div class="ad-content">
+                <div class="ad-text">
+                    <h3>Put your ad here</h3>
+                    <p>Promote a film, event, or brand across Legion Space. Reach cinema lovers with a premium spotlight.</p>
+                </div>
+                <button class="ad-cta">Advertise with us</button>
+            </div>
+        </div>
+    </section>
+
     <footer class="container site-footer">
         <div class="footer-content">
             
@@ -329,6 +351,17 @@
             <div class="confirm-buttons">
                 <button class="btn-confirm" onclick="proceedToIMDb()">Continue to IMDb</button>
                 <button class="btn-cancel" onclick="closeRedirectModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="forumRedirectModal" class="confirm-modal-overlay">
+        <div class="confirm-modal-box">
+            <h3>Go to Forum Page?</h3>
+            <p>Want to open the forum page for this movie?</p>
+            <div class="confirm-buttons">
+                <button class="btn-confirm" onclick="proceedToForum()">Yes, open Forum</button>
+                <button class="btn-cancel" onclick="closeForumRedirectModal()">No, stay here</button>
             </div>
         </div>
     </div>

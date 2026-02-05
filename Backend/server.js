@@ -22,6 +22,33 @@ const TMDB_API_KEY = 'f4705f0e34fafba5ccef5cc38a703fc5';
 const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p/w500';
 const TRANSLATION_CACHE_FILE = path.join(__dirname, 'translation_cache.json');
+const ADMIN_BOOTSTRAP_EMAIL = process.env.ADMIN_BOOTSTRAP_EMAIL || 'LegionCinemaAdmin@gmail.com';
+const ADMIN_BOOTSTRAP_PASSWORD = process.env.ADMIN_BOOTSTRAP_PASSWORD || 'AdminPriv2.0';
+const ADMIN_BOOTSTRAP_USERNAME = process.env.ADMIN_BOOTSTRAP_USERNAME || 'Legion Admin';
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean);
+if (ADMIN_BOOTSTRAP_EMAIL) {
+    const normalized = ADMIN_BOOTSTRAP_EMAIL.trim().toLowerCase();
+    if (normalized && !ADMIN_EMAILS.includes(normalized)) {
+        ADMIN_EMAILS.push(normalized);
+    }
+}
+const ADMIN_UIDS = (process.env.ADMIN_UIDS || '')
+    .split(',')
+    .map(uid => parseInt(uid.trim(), 10))
+    .filter(uid => !Number.isNaN(uid) && uid > 0);
+
+function isAdminUser(user) {
+    if (!user) return false;
+    if (user.isAdmin === true) return true;
+    const email = user.userEmail ? String(user.userEmail).trim().toLowerCase() : '';
+    const uid = parseInt(user.userUID, 10);
+    if (email && ADMIN_EMAILS.includes(email)) return true;
+    if (uid && ADMIN_UIDS.includes(uid)) return true;
+    return false;
+}
 
 const TMDB_GENRES = {
     action: 28,
@@ -175,13 +202,19 @@ app.use((req, res, next) => {
     next();
 });
 
+// Friendly admin routes
+app.get('/admin', (req, res) => res.redirect('/html/admin.html'));
+app.get('/html/admin', (req, res) => res.redirect('/html/admin.html'));
+
 function signUserToken(user) {
+    const isAdmin = isAdminUser(user);
     return jwt.sign(
         {
             userUID: user.userUID,
             userEmail: user.userEmail,
             username: user.username,
-            userTier: user.userTier
+            userTier: user.userTier,
+            isAdmin
         },
         JWT_SECRET,
         { expiresIn: JWT_EXPIRES_IN }
@@ -198,6 +231,16 @@ function requireAuth(req, res, next) {
     } catch (err) {
         return res.status(401).json({ error: 'Invalid or expired token' });
     }
+}
+
+function requireAdmin(req, res, next) {
+    requireAuth(req, res, () => {
+        const adminAllowed = req.user && (req.user.isAdmin === true || isAdminUser(req.user));
+        if (!adminAllowed) {
+            return res.status(403).json({ error: 'Admin access required' });
+        }
+        return next();
+    });
 }
 
 // --- 1.5 TRANSLATION PROXY ---
@@ -329,6 +372,38 @@ if (!fs.existsSync(usersPath)) {
     fs.writeFileSync(usersPath, JSON.stringify([]));
 }
 
+async function ensureAdminUser() {
+    try {
+        if (!ADMIN_BOOTSTRAP_EMAIL || !ADMIN_BOOTSTRAP_PASSWORD) return;
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const users = JSON.parse(data) || [];
+        const exists = users.find(u => String(u.userEmail).toLowerCase() === String(ADMIN_BOOTSTRAP_EMAIL).toLowerCase());
+        if (exists) return;
+
+        const maxUID = users.reduce((max, u) => Math.max(max, parseInt(u.userUID, 10) || 0), 0);
+        const newUID = maxUID + 1;
+        const hashedPassword = await bcrypt.hash(ADMIN_BOOTSTRAP_PASSWORD, BCRYPT_SALT_ROUNDS);
+
+        const userRecord = {
+            username: ADMIN_BOOTSTRAP_USERNAME,
+            userUID: newUID,
+            userEmail: ADMIN_BOOTSTRAP_EMAIL,
+            userTier: 'Gold',
+            userLanguage: 'en',
+            searchCount: 0,
+            viewCount: 0,
+            allUIDs: users.map(u => parseInt(u.userUID, 10)).filter(n => !Number.isNaN(n)).concat(newUID),
+            userPassword: hashedPassword
+        };
+
+        users.push(userRecord);
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+        console.log('✅ Admin bootstrap user created:', ADMIN_BOOTSTRAP_EMAIL);
+    } catch (err) {
+        console.error('Admin bootstrap error:', err);
+    }
+}
+
 // --- 3.5 FORUM FILES SETUP ---
 const forumMoviesPath = path.join(reviewsDir, 'forum_movies.json');
 const forumThreadsPath = path.join(reviewsDir, 'forum_threads.json');
@@ -339,6 +414,8 @@ if (!fs.existsSync(forumMoviesPath)) {
 if (!fs.existsSync(forumThreadsPath)) {
     fs.writeFileSync(forumThreadsPath, JSON.stringify([]));
 }
+
+ensureAdminUser();
 
 // =========================================
 //  4. MOVIE READ ROUTES
@@ -882,6 +959,7 @@ app.post('/users/register', strictLimiter, async (req, res) => {
         users.push(userRecord);
         fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
         const { userPassword: _userPassword, ...safeUser } = userRecord;
+        safeUser.isAdmin = isAdminUser(userRecord);
         const token = signUserToken(safeUser);
         res.json({ token, user: safeUser });
     } catch (err) {
@@ -913,6 +991,7 @@ app.post('/users/auth', strictLimiter, async (req, res) => {
         }
 
         const { userPassword: _userPassword, ...safeUser } = user;
+        safeUser.isAdmin = isAdminUser(user);
         const token = signUserToken(safeUser);
         res.json({ token, user: safeUser });
     } catch (err) {
@@ -1507,6 +1586,235 @@ app.delete('/forum/threads/:id', (req, res) => {
     } catch (err) {
         console.error('Error deleting thread:', err);
         res.status(500).json({ error: 'Could not delete thread' });
+    }
+});
+
+// =========================================
+//  9.9 ADMIN STATS
+// =========================================
+function readJsonSafe(filePath, fallback) {
+    try {
+        if (!fs.existsSync(filePath)) return fallback;
+        const raw = fs.readFileSync(filePath, 'utf8');
+        return raw ? JSON.parse(raw) : fallback;
+    } catch (err) {
+        console.warn('Admin stats read error:', err.message || err);
+        return fallback;
+    }
+}
+
+function tallyVotes(votersObj) {
+    const voters = votersObj && typeof votersObj === 'object' ? votersObj : {};
+    let up = 0;
+    let down = 0;
+    Object.values(voters).forEach(vote => {
+        if (vote === 'down') down += 1;
+        else up += 1;
+    });
+    return { total: up + down, up, down };
+}
+
+function dbGet(sql, params = []) {
+    return new Promise((resolve, reject) => {
+        db.get(sql, params, (err, row) => {
+            if (err) reject(err);
+            else resolve(row);
+        });
+    });
+}
+
+app.get('/admin/stats', requireAdmin, async (req, res) => {
+    try {
+        const users = readJsonSafe(usersPath, []);
+        const reviews = readJsonSafe(reviewsPath, []);
+        const playlists = readJsonSafe(playlistsPath, []);
+        const forumThreads = readJsonSafe(forumThreadsPath, []);
+        const forumMovies = readJsonSafe(forumMoviesPath, []);
+
+        const tierCounts = users.reduce((acc, user) => {
+            const tier = String(user.userTier || 'Free');
+            acc[tier] = (acc[tier] || 0) + 1;
+            return acc;
+        }, {});
+
+        const adminCount = users.filter(u => isAdminUser(u)).length;
+        const totalSearches = users.reduce((sum, u) => sum + (parseInt(u.searchCount, 10) || 0), 0);
+        const totalViews = users.reduce((sum, u) => sum + (parseInt(u.viewCount, 10) || 0), 0);
+
+        const reviewStarsSum = reviews.reduce((sum, r) => sum + (parseInt(r.stars, 10) || 0), 0);
+        const avgReviewStars = reviews.length ? (reviewStarsSum / reviews.length) : 0;
+        const reviewCountsByUser = reviews.reduce((acc, r) => {
+            const user = r.user || 'Guest';
+            acc[user] = (acc[user] || 0) + 1;
+            return acc;
+        }, {});
+        const topReviewers = Object.entries(reviewCountsByUser)
+            .map(([user, count]) => ({ user, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 10);
+
+        let playlistVoteTotal = 0;
+        let playlistVoteUp = 0;
+        let playlistVoteDown = 0;
+        let playlistCommentCount = 0;
+        let playlistCommentUpvotes = 0;
+        let playlistMoviesCount = 0;
+
+        const playlistTop = playlists
+            .map(p => ({ id: p.id, name: p.name || 'Untitled', score: p.score || 0 }))
+            .sort((a, b) => (b.score || 0) - (a.score || 0))
+            .slice(0, 10);
+
+        const likeItems = [];
+
+        playlists.forEach(playlist => {
+            playlistMoviesCount += (playlist.movies || []).length;
+            const votes = tallyVotes(playlist.voters);
+            playlistVoteTotal += votes.total;
+            playlistVoteUp += votes.up;
+            playlistVoteDown += votes.down;
+
+            Object.entries(playlist.voters || {}).forEach(([uid, vote]) => {
+                likeItems.push({
+                    type: 'playlist',
+                    entityId: String(playlist.id),
+                    entityName: playlist.name || 'Untitled',
+                    userUID: String(uid),
+                    vote: vote === 'down' ? 'down' : 'up'
+                });
+            });
+
+            const comments = playlist.comments || [];
+            playlistCommentCount += comments.length;
+            comments.forEach(comment => {
+                playlistCommentUpvotes += parseInt(comment.upvotes, 10) || 0;
+                Object.keys(comment.voters || {}).forEach(uid => {
+                    likeItems.push({
+                        type: 'playlist_comment',
+                        entityId: String(comment.id),
+                        parentId: String(playlist.id),
+                        parentName: playlist.name || 'Untitled',
+                        userUID: String(uid),
+                        vote: 'up'
+                    });
+                });
+            });
+        });
+
+        let threadVoteTotal = 0;
+        let threadVoteUp = 0;
+        let threadVoteDown = 0;
+        let forumCommentCount = 0;
+        let forumCommentUpvotes = 0;
+
+        const threadTop = forumThreads
+            .map(t => ({ id: t.id, title: t.title || 'Untitled', score: t.score || 0 }))
+            .sort((a, b) => (b.score || 0) - (a.score || 0))
+            .slice(0, 10);
+
+        forumThreads.forEach(thread => {
+            const votes = tallyVotes(thread.voters);
+            threadVoteTotal += votes.total;
+            threadVoteUp += votes.up;
+            threadVoteDown += votes.down;
+
+            Object.entries(thread.voters || {}).forEach(([uid, vote]) => {
+                likeItems.push({
+                    type: 'forum_thread',
+                    entityId: String(thread.id),
+                    entityName: thread.title || 'Untitled',
+                    userUID: String(uid),
+                    vote: vote === 'down' ? 'down' : 'up'
+                });
+            });
+
+            const comments = thread.comments || [];
+            forumCommentCount += comments.length;
+            comments.forEach(comment => {
+                forumCommentUpvotes += parseInt(comment.upvotes, 10) || 0;
+                Object.keys(comment.voters || {}).forEach(uid => {
+                    likeItems.push({
+                        type: 'forum_comment',
+                        entityId: String(comment.id),
+                        parentId: String(thread.id),
+                        parentName: thread.title || 'Untitled',
+                        userUID: String(uid),
+                        vote: 'up'
+                    });
+                });
+            });
+        });
+
+        let movieCount = 0;
+        let totalClicks = 0;
+        try {
+            const movieRow = await dbGet('SELECT COUNT(*) as count FROM movies');
+            movieCount = movieRow?.count || 0;
+        } catch (err) {
+            console.warn('Admin stats movie count error:', err.message || err);
+        }
+
+        try {
+            const clickRow = await dbGet('SELECT COALESCE(SUM(click_count), 0) as total FROM movie_clicks');
+            totalClicks = clickRow?.total || 0;
+        } catch (err) {
+            console.warn('Admin stats click count error:', err.message || err);
+        }
+
+        res.json({
+            generatedAt: new Date().toISOString(),
+            users: {
+                total: users.length,
+                admins: adminCount,
+                byTier: tierCounts,
+                totalSearches,
+                totalViews
+            },
+            movies: {
+                total: movieCount,
+                totalClicks
+            },
+            reviews: {
+                total: reviews.length,
+                averageStars: Number(avgReviewStars.toFixed(2)),
+                topReviewers
+            },
+            playlists: {
+                total: playlists.length,
+                totalMovies: playlistMoviesCount,
+                votes: {
+                    total: playlistVoteTotal,
+                    up: playlistVoteUp,
+                    down: playlistVoteDown
+                },
+                comments: {
+                    total: playlistCommentCount,
+                    upvotes: playlistCommentUpvotes
+                },
+                topByScore: playlistTop
+            },
+            forum: {
+                moviesTotal: forumMovies.length,
+                threadsTotal: forumThreads.length,
+                votes: {
+                    total: threadVoteTotal,
+                    up: threadVoteUp,
+                    down: threadVoteDown
+                },
+                comments: {
+                    total: forumCommentCount,
+                    upvotes: forumCommentUpvotes
+                },
+                topThreads: threadTop
+            },
+            likes: {
+                total: likeItems.length,
+                items: likeItems
+            }
+        });
+    } catch (err) {
+        console.error('Admin stats error:', err);
+        res.status(500).json({ error: 'Could not load admin stats' });
     }
 });
 

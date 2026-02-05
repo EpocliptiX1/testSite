@@ -32,8 +32,8 @@
     "userEmail": "ex@gmail.com",
     "userTier": "Free",
     "userLanguage": "en",
-    "searchCount": 1,
-    "viewCount": 0,
+    "searchCount": 2,
+    "viewCount": 1,
     "allUIDs": [
       1,
       2,
@@ -56,5 +56,22 @@
       4
     ],
     "userPassword": "$2b$10$qCCvHNdU7d9jgio4tCrLNuP5iMTR7bD/LNwEghO71CYzRsrFKCL7q"
+  },
+  {
+    "username": "Legion Admin",
+    "userUID": 5,
+    "userEmail": "LegionCinemaAdmin@gmail.com",
+    "userTier": "Gold",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "userPassword": "$2b$10$cNEPvsPkiIiwzSqw1A.qEutpmYK..DtbImPv.xz/VOMzMNMN/xf3a"
   }
 ]

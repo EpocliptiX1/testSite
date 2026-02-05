@@ -1,15 +1,15 @@
 /* 
    Handles Movie Details Page population, Recommendations, and Global Trailer Fetching
 */
-//
+//     AIzaSyCGg0QqAURfPOs5OoCemTRBMrOxqtbw0tg
 // 1. GLOBAL CONFIGURATION
-window.YT_API_KEY = 'i';
+window.YT_API_KEY = '';
 let currentPlaylist = []; 
 let activeTrailerIdx = -1; 
  
 // 2. GLOBAL TRAILER FETCHER (Used by this file AND mainPageControls.js)
 window.fetchYTId = async function(name) {
-    const API_KEY = 'i'; 
+    const API_KEY = ''; 
     try {
         const query = encodeURIComponent(name + " official trailer");
         const res = await fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&q=${query}&maxResults=1&type=video&key=${API_KEY}`);
@@ -19,6 +19,26 @@ window.fetchYTId = async function(name) {
         return "";
     }
 }
+
+// Forum redirect modal controls (Movie Info page)
+window.openForumRedirectModal = function() {
+    const modal = document.getElementById('forumRedirectModal');
+    if (modal) modal.classList.add('active');
+};
+
+window.closeForumRedirectModal = function() {
+    const modal = document.getElementById('forumRedirectModal');
+    if (modal) modal.classList.remove('active');
+};
+
+window.proceedToForum = function() {
+    const titleEl = document.getElementById('title');
+    const movieTitle = titleEl ? titleEl.innerText.trim() : '';
+    const forumUrl = movieTitle
+        ? `/html/forum.html?movie=${encodeURIComponent(movieTitle)}`
+        : '/html/forum.html';
+    window.location.href = forumUrl;
+};
 // 3. PAGE INITIALIZATION
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('[MovieInfo] DOMContentLoaded');
@@ -26,6 +46,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const movieId = urlParams.get('id');
     console.log('[MovieInfo] movieId', movieId);
     if (!movieId) return;
+
+    const forumModal = document.getElementById('forumRedirectModal');
+    if (forumModal) {
+        forumModal.addEventListener('click', (event) => {
+            if (event.target === forumModal) {
+                window.closeForumRedirectModal();
+            }
+        });
+    }
 
     try {
         const baseUrl = `http://localhost:3000/movie/${movieId}`;
@@ -157,6 +186,33 @@ document.addEventListener('DOMContentLoaded', async () => {
             initRecommendations(movie, movieYear, directors[0], stars);
         } else {
             initRecommendations(movie, movieYear, directors[0], stars);
+        }
+
+        // Forum CTA visibility (only if forum data exists for this movie)
+        try {
+            const forumCta = document.getElementById('forumCtaBar');
+            if (forumCta) {
+                const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const baseUrl = isLocal ? 'http://localhost:3000' : window.location.origin;
+                const response = await fetch(`${baseUrl}/forum/movies`);
+                const forumMovies = await response.json();
+                const movieTitle = (movie['Movie Name'] || movie.title || '').trim();
+                const normalize = (value) => String(value || '')
+                    .toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                const movieNorm = normalize(movieTitle);
+                const found = (forumMovies || []).find(m => {
+                    const forumTitle = normalize(m.movieTitle);
+                    return String(m.movieId) === String(movieId)
+                        || (movieNorm && forumTitle && (forumTitle === movieNorm || forumTitle.includes(movieNorm) || movieNorm.includes(forumTitle)));
+                });
+                forumCta.style.display = found ? 'flex' : 'none';
+            }
+        } catch (err) {
+            const forumCta = document.getElementById('forumCtaBar');
+            if (forumCta) forumCta.style.display = 'none';
         }
 
     } catch (err) {

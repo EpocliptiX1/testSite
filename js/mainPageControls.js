@@ -990,6 +990,7 @@ function handleSignup(e) {
             localStorage.setItem('userTier', user.userTier || tier);
             localStorage.setItem('allUIDs', JSON.stringify(user.allUIDs || []));
             localStorage.setItem('userLanguage', user.userLanguage || userLanguage);
+            localStorage.setItem('isAdmin', user.isAdmin ? 'true' : 'false');
             
             // Initialize usage counters as strings for subscription logic
             localStorage.setItem('searchCount', '0');
@@ -1198,6 +1199,7 @@ window.handleSignIn = async function(e) {
         localStorage.setItem('searchCount', String(user.searchCount || 0));
         localStorage.setItem('viewCount', String(user.viewCount || 0));
         localStorage.setItem('allUIDs', JSON.stringify(user.allUIDs || []));
+        localStorage.setItem('isAdmin', user.isAdmin ? 'true' : 'false');
 
         closeSignInModal();
         safeReload();
@@ -1226,6 +1228,7 @@ window.toggleAccountMenu = function() {
         const tier = localStorage.getItem('userTier') || "Free";
         const searches = parseInt(localStorage.getItem('searchCount')) || 0;
         const views = parseInt(localStorage.getItem('viewCount')) || 0;
+        const isAdmin = localStorage.getItem('isAdmin') === 'true';
 
         // --- AUTH CHECK: Disable/Enable Settings and Logout ---
         const settingsLink = dropdown.querySelector('a[onclick="openSettings()"]');
@@ -1255,6 +1258,26 @@ window.toggleAccountMenu = function() {
         if (document.getElementById('dropTier')) document.getElementById('dropTier').innerText = tier + " Tier";
         if (document.getElementById('statSearch')) document.getElementById('statSearch').innerText = `${searches}/${sLimit}`;
         if (document.getElementById('statView')) document.getElementById('statView').innerText = `${views}/${vLimit}`;
+
+        const existingAdminLink = dropdown.querySelector('#adminPanelLink');
+        if (isAdmin && !existingAdminLink) {
+            const adminLink = document.createElement('a');
+            adminLink.id = 'adminPanelLink';
+            adminLink.href = '/html/admin.html';
+            adminLink.className = 'drop-link';
+            adminLink.innerText = 'Admin Panel';
+
+            const settingsLinkAnchor = dropdown.querySelector('a[onclick="openSettings()"]');
+            if (settingsLinkAnchor && settingsLinkAnchor.parentNode) {
+                settingsLinkAnchor.parentNode.insertBefore(adminLink, settingsLinkAnchor);
+            } else {
+                dropdown.appendChild(adminLink);
+            }
+        }
+
+        if (!isAdmin && existingAdminLink) {
+            existingAdminLink.remove();
+        }
     }
 };
 
