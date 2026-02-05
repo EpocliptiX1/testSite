@@ -58,10 +58,10 @@
     "userPassword": "$2b$10$qCCvHNdU7d9jgio4tCrLNuP5iMTR7bD/LNwEghO71CYzRsrFKCL7q"
   },
   {
-    "username": "Legion Admin",
+    "username": "admin",
     "userUID": 5,
     "userEmail": "LegionCinemaAdmin@gmail.com",
-    "userTier": "Gold",
+    "userTier": "Free",
     "userLanguage": "en",
     "searchCount": 0,
     "viewCount": 0,
@@ -73,5 +73,42 @@
       5
     ],
     "userPassword": "$2b$10$cNEPvsPkiIiwzSqw1A.qEutpmYK..DtbImPv.xz/VOMzMNMN/xf3a"
+  },
+  {
+    "username": "aaaaaaaaaaaaaa",
+    "userUID": 6,
+    "userEmail": "EEEEEEEEEEEEEEEEEEEEEEEEEEEE@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 0,
+    "viewCount": 0,
+    "allUIDs": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "userPassword": "$2b$10$zmyYEGEF5FomgQq6BHs3ju0DrgfRyTXSlUfDGkWJmrAuZtaX4lpy6"
+  },
+  {
+    "username": "idk",
+    "userUID": 7,
+    "userEmail": "idk@gmail.com",
+    "userTier": "Free",
+    "userLanguage": "en",
+    "searchCount": 1,
+    "viewCount": 0,
+    "allUIDs": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "userPassword": "$2b$10$IzQk6Hy9vCR3zxlbWhsLj.LlOI/sy6NNEkSM7IqgewxN/.EMr7Vw2"
   }
 ]

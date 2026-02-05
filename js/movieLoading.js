@@ -3,7 +3,9 @@
 */
 //     AIzaSyCGg0QqAURfPOs5OoCemTRBMrOxqtbw0tg
 // 1. GLOBAL CONFIGURATION
-window.YT_API_KEY = '';
+if (!window.YT_API_KEY || window.YT_API_KEY.length < 10) {
+    window.YT_API_KEY = '';
+}
 let currentPlaylist = []; 
 let activeTrailerIdx = -1; 
  

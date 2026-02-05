@@ -1,3 +1,27 @@
+// --- TMDB API KEY STATUS CHECK ---
+async function checkTmdbApiStatus() {
+    const circle = document.getElementById('tmdbApiStatusCircle');
+    const text = document.getElementById('tmdbApiStatusText');
+    if (!circle || !text) return;
+    text.textContent = 'Checking...';
+    circle.style.background = '#aaa';
+    try {
+        const res = await fetch('/api/tmdb-key-status');
+        const data = await res.json();
+        if (data.valid) {
+            circle.style.background = '#3ec46d';
+            text.textContent = 'Valid';
+        } else {
+            circle.style.background = '#e74c3c';
+            text.textContent = 'Invalid';
+        }
+    } catch (err) {
+        circle.style.background = '#e74c3c';
+        text.textContent = 'Error';
+    }
+}
+
+window.addEventListener('DOMContentLoaded', checkTmdbApiStatus);
 const adminMessage = document.getElementById('adminMessage');
 const adminContent = document.getElementById('adminContent');
 const statsGrid = document.getElementById('statsGrid');

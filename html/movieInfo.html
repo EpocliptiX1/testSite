@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Movie Details - Legion Space</title>
-    <link rel="stylesheet" href="/css/style.css">   
     <link rel="stylesheet" href="/css/theme-enhancements.css">
+    <link rel="stylesheet" href="/css/style.css">   
     <script src="/js/encryption.js"></script>
     <script src="/js/theme.js"></script>
     <script src="/js/i18n.js"></script>
@@ -13,6 +13,7 @@
     <script src="/js/tmdb.js"></script>
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
+    <script src="/js/tmdbStatus.js"></script>
 </head>
 <body>
 
@@ -22,14 +23,12 @@
             <span></span>
             <span></span>
         </div>
-
         <div class="logo-container">
             <a href="/html/indexMain.html" class="logo-link">
                 <img src="/img/LOGO.png" alt="Logo" class="logo-img">
                 <img src="/img/LOGO_Short.png" alt="Logo" class="logo-img logo-imgS">
             </a>
         </div>
-
         <ul class="nav-links" id="navLinks">
             <li><a href="/html/indexMain.html" class="myNavLink" data-i18n="nav_home">Home</a></li>
             <li><a href="/html/indexBrowse.html" class="myNavLink">Browse</a></li>
@@ -37,8 +36,7 @@
             <li><a href="personalList.html" class="myNavLink" data-i18n="nav_mylist">My List</a></li>
             <li><a href="/html/customPlaylists.html" class="myNavLink">Playlists</a></li>
             <li><a href="/html/forum.html" class="myNavLink noborder">Forum</a></li>
-        </ul>       
-
+        </ul>
         <div class="nav-tools">
             <div class="search-wrapper">
                 <div class="search-box">
@@ -46,11 +44,9 @@
                 </div>
                 <div class="search-results-menu" id="searchResults"></div>
             </div>
-
             <div class="account-trigger" onclick="toggleAccountMenu()">
                 <div class="grey-profile-pic"></div>
                 <span id="navUsername" data-i18n="nav_guest">Guest</span>
-
                 <div class="account-dropdown" id="accountDropdown">
                     <div class="dropdown-header">
                         <p id="dropTier" class="tier-badge" data-i18n="nav_free_tier">Free Tier</p>
@@ -365,6 +361,7 @@
             </div>
         </div>
     </div>
+    <!-- Settings Modal copied from indexMain.html -->
     <div id="settingsModal" class="settings-modal-overlay">
         <div class="settings-content">
             <span class="close-settings" onclick="closeSettings()">&times;</span>
@@ -377,25 +374,19 @@
                         <input type="text" id="settingsUsername" placeholder="Enter new username">
                     </div>
                     <div class="setting-item">
-                        <label>Password</label>
-                        <input type="password" id="settingsPassword" placeholder="••••••••">
-                    </div>
-                    <div class="setting-item">
                         <label>Profile Picture</label>
                         <div class="large-profile-icon" style="margin-bottom: 10px;"></div>
-                        
                         <button class="btn-small" onclick="document.getElementById('pfpInput').click()">Upload New Image (1MB)</button>
-                        
                         <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
                     </div>
                     <div class="beta-notice-box">
-                        <div class="beta-badge">BETA v0.9</div>
-                        <p>You are currently using the <strong>Cinematography Preview</strong> build of Legion Space.</p>
+                        <div class="beta-badge">ALPHA v1.0</div>
+                        <p>You are currently using the <strong>Localized/TMDB API</strong> build of Legion Space.</p>
                         <ul>
-                            <li>Experimental 4K Metadata mapping enabled.</li>
-                            <li>Localized database: Astana/Kazakhstan Region.</li>
+                            <li>Dynamic API source: Local DB or TMDB.</li>
+                            <li>Region: Astana/Kazakhstan or Global (TMDB).</li>
                         </ul>
-                        <p class="beta-small">Some settings are read-only during the hackathon phase.</p>
+                        <p class="beta-small">Some settings are read-only during the current phase.</p>
                     </div>
                     <div class="setting-item">
                         <label>Language</label>
@@ -403,7 +394,7 @@
                             <option value="en">🇬🇧 English</option>
                             <option value="ru">🇷🇺 Русский</option>
                         </select>
-                    </div>                    
+                    </div>
                     <div class="setting-item">
                         <label>Movie Data Source</label>
                         <select id="settingsMovieSource" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
@@ -414,7 +405,6 @@
                 </div>
                 <div class="settings-section">
                     <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>
-                    
                     <div class="setting-item coming-soon">
                         <label>Custom Themes</label>
                         <div class="blurred-preview">
@@ -422,7 +412,6 @@
                             <div class="blur-overlay"><span>COMING SOON</span></div>
                         </div>
                     </div>
-
                     <div class="setting-item coming-soon" style="margin-top: 15px;">
                         <label>Cloud Sync (Multi-Device)</label>
                         <div class="blurred-preview" style="height: 60px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
@@ -430,24 +419,34 @@
                             <div class="blur-overlay"><span>PLANNED v2.0</span></div>
                         </div>
                     </div>
-
-                    <div class="setting-item coming-soon" style="margin-bottom: 0;">
+                    <div class="setting-item" style="margin-bottom: 0;">
                         <label>TMDB Global Database</label>
-                        <div class="blurred-preview" style="height: 259px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
-                            <span style="font-size: 24px;">🌐</span>
-                            <div class="blur-overlay"><span>API PENDING</span></div>
+                        <div style="display: flex; align-items: center; gap: 12px; margin: 30px 0 30px 0; justify-content: center;">
+                            <span id="tmdbApiStatusCircle" style="width: 22px; height: 22px; border-radius: 50%; display: inline-block; background: #aaa; border: 2px solid #333;"></span>
+                            <span id="apiStatusText" style="font-size: 1.1em; color: #888;">Checking API...</span>
                         </div>
+                        <div style="text-align: center; color: #aaa; font-size: 0.95em;">Checks if TMDB API key is valid and online.</div>
                     </div>
                 </div>
             </div>
-
             <div class="settings-footer">
                 <button class="btn-save" onclick="saveSettings()">Save Changes</button>
             </div>
         </div>
     </div>
+        <div id="localDbWarningModal" class="confirm-modal-overlay" style="display:none;">
+            <div class="confirm-modal-box">
+                <h3>Warning: Limited Movie Data</h3>
+                <p>Switching to the smaller local database may result in some movies not being displayed properly and missing information. For the best experience, use the External API (TMDB).</p>
+                <div class="confirm-buttons">
+                    <button class="btn-confirm" id="confirmLocalDbSwitch">Continue</button>
+                    <button class="btn-cancel" id="cancelLocalDbSwitch">Cancel</button>
+                </div>
+            </div>
+        </div>
     <script src="/js/movieLoading.js"></script>
     <script src="/js/customPlaylist.js"></script>
+        <script src="/js/apiStatus.js"></script>
     
     <script>
             function handleInfoAdd() {
@@ -491,7 +490,7 @@
                 setTimeout(() => updateInfoButtonUI(movieId), 500);
             });
         </script>
-    <script src="/js/allMovies.js"></script>
+    <!-- <script src="/js/allMovies.js"></script> -->
     <script src="/js/mainPageControls.js"></script>
     </body>
 </html>

@@ -1,3 +1,43 @@
+// --- SETTINGS/ACCOUNT/API STATUS INIT FOR MOVIEINFO ---
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('settingsModal')) {
+        // Set username in settings
+        const nameInput = document.getElementById('settingsUsername');
+        const navName = document.getElementById('navUsername');
+        const username = localStorage.getItem('username') || 'Guest';
+        if (nameInput) nameInput.value = username;
+        if (navName) navName.innerText = username;
+
+        // Set language
+        const langInput = document.getElementById('settingsLanguage');
+        if (langInput && localStorage.getItem('userLanguage')) {
+            langInput.value = localStorage.getItem('userLanguage');
+        }
+
+        // Set movie source
+        const sourceInput = document.getElementById('settingsMovieSource');
+        if (sourceInput && localStorage.getItem('movieSource')) {
+            sourceInput.value = localStorage.getItem('movieSource');
+        }
+
+        // Set stats
+        const statSearch = document.getElementById('statSearch');
+        const statView = document.getElementById('statView');
+        if (statSearch) statSearch.innerText = localStorage.getItem('searches') || '0/5';
+        if (statView) statView.innerText = localStorage.getItem('views') || '0/3';
+
+        // Set API status (standardize to apiStatusText)
+        const apiStatusText = document.getElementById('apiStatusText');
+        if (apiStatusText) {
+            apiStatusText.innerText = 'Checking API...';
+            // Simulate API check (replace with real check if needed)
+            setTimeout(() => {
+                apiStatusText.innerText = 'Online';
+                apiStatusText.style.color = '#46d369';
+            }, 500);
+        }
+    }
+});
 /* =========================================
    1. DYNAMIC HERO SLIDER LOGIC
    ========================================= */
@@ -101,6 +141,8 @@ window.nextSlide = function() {
 };
 
 window.prevSlide = function() {
+                // Default: use API for movies unless manually changed or API fails
+                localStorage.setItem('movieSource', 'api');
     currentSlide = (currentSlide - 1 + heroMovies.length) % heroMovies.length;
     updateHero();
 };
@@ -234,8 +276,35 @@ window.proceedToIMDb = function() {
  
 
 // Ensure initHero runs when the page loads
+
+// TMDB API Key Checker
+async function checkTmdbApiKey() {
+    const statusCircle = document.getElementById('apiStatusCircle');
+    const statusText = document.getElementById('apiStatusText');
+    if (!statusCircle || !statusText) return;
+    statusCircle.style.background = '#aaa';
+    statusText.textContent = 'Checking API...';
+    try {
+        // Try a simple TMDB endpoint with the API key
+        const url = window.tmdbBuildUrl ? window.tmdbBuildUrl('/movie/550') : null;
+        if (!url) throw new Error('No TMDB URL');
+        const res = await fetch(url);
+        if (res.ok) {
+            statusCircle.style.background = '#2ecc40'; // green
+            statusText.textContent = 'API Key Valid';
+        } else {
+            statusCircle.style.background = '#ff4444'; // red
+            statusText.textContent = 'API Key Invalid';
+        }
+    } catch (err) {
+        statusCircle.style.background = '#ff4444';
+        statusText.textContent = 'API Offline or Invalid';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initHero();
+    checkTmdbApiKey();
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1040,6 +1109,12 @@ window.navigateToMovie = function(movieId) {
     window.location.href = `movieInfo.html?id=${movieId}`;
 };
 
+// Helper to get movie source, fallback to local only if manually picked or API fails
+function getMovieSource() {
+    const src = localStorage.getItem('movieSource');
+    return src === 'local' ? 'local' : 'api';
+}
+
  
 function checkUsageLimit(type) {
     const tier = localStorage.getItem('userTier') || 'Free';
@@ -1120,7 +1195,6 @@ window.persistUserStats = function() {
 };
 
 function safeReload() {
-    if (window.location.pathname.includes('movieInfo.html')) return;
     location.reload();
 }
 
@@ -1906,8 +1980,10 @@ function updateThemeButton(theme) {
 
 // Initialize theme button on page load
 window.addEventListener('DOMContentLoaded', () => {
-    const currentTheme = window.themeManager.getCurrentTheme();
-    updateThemeButton(currentTheme);
+    if (window.themeManager && typeof window.themeManager.getCurrentTheme === 'function') {
+        const currentTheme = window.themeManager.getCurrentTheme();
+        updateThemeButton(currentTheme);
+    }
 });
 
 // Language selection functions

@@ -1,3 +1,4 @@
+// ...existing code...
 const express = require('express');
 const sqlite3 = require('sqlite3').verbose();
 const cors = require('cors');
@@ -243,6 +244,26 @@ function requireAdmin(req, res, next) {
     });
 }
 
+
+// --- TMDB API KEY CHECK ENDPOINT ---
+// Improved TMDB API key status check: mimic movie loading logic
+// Improved TMDB API key status check: use /authentication endpoint for direct key validation
+app.get('/api/tmdb-key-status', async (req, res) => {
+    try {
+        if (!isTmdbConfigured()) {
+            return res.json({ valid: false, message: 'TMDB API key not configured.' });
+        }
+        const url = `${TMDB_BASE_URL}/authentication`;
+        const response = await axios.get(url, { params: { api_key: TMDB_API_KEY } });
+        if (response.data && response.data.success) {
+            return res.json({ valid: true });
+        } else {
+            return res.json({ valid: false, message: response.data.status_message || 'TMDB API key invalid or unexpected data.' });
+        }
+    } catch (err) {
+        return res.json({ valid: false, message: err.response?.data?.status_message || 'TMDB API key check failed.' });
+    }
+});
 // --- 1.5 TRANSLATION PROXY ---
 app.post('/translate', async (req, res) => {
     try {
@@ -997,6 +1018,46 @@ app.post('/users/auth', strictLimiter, async (req, res) => {
     } catch (err) {
         console.error('Error authenticating user:', err);
         res.status(500).json({ error: 'Could not authenticate user' });
+    }
+});
+
+// Change user password (requires current password, new password, and authentication)
+app.post('/users/change-password', requireAuth, async (req, res) => {
+    try {
+        console.log('Password change endpoint called');
+        const { currentPassword, newPassword } = req.body || {};
+        if (!currentPassword || !newPassword) {
+            console.log('Missing current or new password');
+            return res.status(400).json({ error: 'Current and new password required' });
+        }
+        const data = fs.readFileSync(usersPath, 'utf8');
+        const users = JSON.parse(data) || [];
+        const uidNum = parseInt(req.user.userUID, 10);
+        if (!uidNum) {
+            console.log('Invalid token user');
+            return res.status(401).json({ error: 'Invalid token user' });
+        }
+        const idx = users.findIndex(u => parseInt(u.userUID, 10) === uidNum);
+        if (idx === -1) {
+            console.log('User not found');
+            return res.status(404).json({ error: 'User not found' });
+        }
+        const user = users[idx];
+        // Verify current password
+        const passwordMatch = await bcrypt.compare(currentPassword, user.userPassword);
+        if (!passwordMatch) {
+            console.log('Current password is incorrect');
+            return res.status(401).json({ error: 'Current password is incorrect' });
+        }
+        // Hash and update new password
+        const hashedPassword = await bcrypt.hash(newPassword, BCRYPT_SALT_ROUNDS);
+        users[idx].userPassword = hashedPassword;
+        console.log('Writing new password hash to file:', usersPath);
+        fs.writeFileSync(usersPath, JSON.stringify(users, null, 2));
+        res.json({ message: 'Password updated successfully' });
+    } catch (err) {
+        console.error('Error changing password:', err);
+        res.status(500).json({ error: 'Could not change password' });
     }
 });
 

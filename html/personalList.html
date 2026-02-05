@@ -14,6 +14,7 @@
     <script src="/js/netflixFeatures.js"></script>
     <script src="/js/keyboardShortcuts.js"></script>
     <script src="/js/recommendations.js"></script>
+    <script src="/js/tmdbStatus.js"></script>
   
     
 </head>
@@ -275,10 +276,7 @@
                         <label>Username</label>
                         <input type="text" id="settingsUsername" placeholder="Enter new username">
                     </div>
-                    <div class="setting-item">
-                        <label>Password</label>
-                        <input type="password" id="settingsPassword" placeholder="••••••••">
-                    </div>
+                    
                     <div class="setting-item">
                         <label>Profile Picture</label>
                         <div class="large-profile-icon" style="margin-bottom: 10px;"></div>
@@ -288,13 +286,13 @@
                         <input type="file" id="pfpInput" accept="image/*" style="display: none;" onchange="handlePFPUpload(event)">
                     </div>
                     <div class="beta-notice-box">
-                        <div class="beta-badge">BETA v0.9</div>
-                        <p>You are currently using the <strong>Cinematography Preview</strong> build of Legion Space.</p>
+                        <div class="beta-badge">ALPHA v1.0</div>
+                        <p>You are currently using the <strong>Localized/TMDB API</strong> build of Legion Space.</p>
                         <ul>
-                            <li>Experimental 4K Metadata mapping enabled.</li>
-                            <li>Localized database: Astana/Kazakhstan Region.</li>
+                            <li>Dynamic API source: Local DB or TMDB.</li>
+                            <li>Region: Astana/Kazakhstan or Global (TMDB).</li>
                         </ul>
-                        <p class="beta-small">Some settings are read-only during the hackathon phase.</p>
+                        <p class="beta-small">Some settings are read-only during the current phase.</p>
                     </div>
                     <div class="setting-item">
                         <label>Language</label>
@@ -304,49 +302,60 @@
                         </select>
                     </div>                    
                     <div class="setting-item">
-                        <label>Movie Data Source</label>
-                        <select id="settingsMovieSource" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
-                            <option value="local">Local Database</option>
-                            <option value="api">External API (TMDB)</option>
-                        </select>
+                        <!-- Moved Movie Data Source dropdown into TMDB section below -->
+                    </div>
+                    <div class="settings-section">
+                        <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>
+
+                        <div class="setting-item coming-soon">
+                            <label>Custom Themes</label>
+                            <div class="blurred-preview">
+                                <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop" alt="Preview">
+                                <div class="blur-overlay"><span>COMING SOON</span></div>
+                            </div>
+                        </div>
+
+                        <div class="setting-item coming-soon" style="margin-top: 15px;">
+                            <label>Cloud Sync (Multi-Device)</label>
+                            <div class="blurred-preview" style="height: 60px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
+                                <span style="font-size: 24px;">☁️</span>
+                                <div class="blur-overlay"><span>PLANNED v2.0</span></div>
+                            </div>
+                        </div>
+
+                        <div class="setting-item" style="margin-bottom: 0;">
+                            <label>TMDB Global Database</label>
+                            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                                <span id="apiStatusCircle" style="width: 14px; height: 14px; border-radius: 50%; display: inline-block; background: #aaa; border: 1px solid #333;"></span>
+                                <span id="apiStatusText" style="font-size: 0.95em; color: #888;">Checking API...</span>
+                            </div>
+                            <select id="settingsMovieSource" class="styled-select" style="width: 100%; padding: 10px; background: var(--bg-tertiary); color: var(--text-primary); border: 1px solid var(--border-color); border-radius: 6px;">
+                                <option value="local">Local Database</option>
+                                <option value="api">External API (TMDB)</option>
+                            </select>
+                        </div>
+
                     </div>
                 </div>
-                <div class="settings-section">
-                    <h3><i class="icon-paint"></i> Roadmap & Advanced Features</h3>
-                    
-                    <div class="setting-item coming-soon">
-                        <label>Custom Themes</label>
-                        <div class="blurred-preview">
-                            <img src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=400&auto=format&fit=crop" alt="Preview">
-                            <div class="blur-overlay"><span>COMING SOON</span></div>
-                        </div>
-                    </div>
-
-                    <div class="setting-item coming-soon" style="margin-top: 15px;">
-                        <label>Cloud Sync (Multi-Device)</label>
-                        <div class="blurred-preview" style="height: 60px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
-                            <span style="font-size: 24px;">☁️</span>
-                            <div class="blur-overlay"><span>PLANNED v2.0</span></div>
-                        </div>
-                    </div>
-
-                    <div class="setting-item coming-soon" style="margin-bottom: 0;">
-                        <label>TMDB Global Database</label>
-                        <div class="blurred-preview" style="height: 259px; background: #1a1a1a; display: flex; align-items: center; justify-content: center;">
-                            <span style="font-size: 24px;">🌐</span>
-                            <div class="blur-overlay"><span>API PENDING</span></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div class="settings-footer">
                 <button class="btn-save" onclick="saveSettings()">Save Changes</button>
             </div>
         </div>
     </div>
+        <div id="localDbWarningModal" class="confirm-modal-overlay" style="display:none;">
+            <div class="confirm-modal-box">
+                <h3>Warning: Limited Movie Data</h3>
+                <p>Switching to the smaller local database may result in some movies not being displayed properly and missing information. For the best experience, use the External API (TMDB).</p>
+                <div class="confirm-buttons">
+                    <button class="btn-confirm" id="confirmLocalDbSwitch">Continue</button>
+                    <button class="btn-cancel" id="cancelLocalDbSwitch">Cancel</button>
+                </div>
+            </div>
+        </div>
  
 <script src="/js/myList.js"></script>
+<script src="/js/apiStatus.js"></script>
 
 <script src="/js/mainPageControls.js"></script>
 </body>
